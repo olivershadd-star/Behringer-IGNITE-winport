@@ -139,7 +139,7 @@ public:
                 if (song->dm != nullptr) song->dm->closeAudioDevice();
                 song->createSongWithRandomData(1, 1, 1, 2, 1, 1);
                 song->setActiveSong(song->getSongCount() - 1);
-                song->setSystemState(Ignite::KEY_PRESSED::PLAY_KEY);
+                song->setSystemState(::KEY_PRESSED::PLAY_KEY);
                 song->playSong(0);
                 double energy = 0;
                 for (int blockIndex = 0; blockIndex < 150; ++blockIndex) {
