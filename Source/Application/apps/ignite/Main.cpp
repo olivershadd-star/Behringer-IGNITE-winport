@@ -189,7 +189,12 @@ public:
             setContentComponentSize(1220, 900);
             setResizeLimits(854, 630, 1830, 1350);
             getConstrainer()->setFixedAspectRatio(1220.0 / 900.0);
-            centreWithSize(1220, 900);
+            if (auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+            {
+                const double fit = juce::jmin(1.0, juce::jmin((display->userArea.getWidth() - 40) / 1220.0,
+                    (display->userArea.getHeight() - 80) / 900.0));
+                centreWithSize(static_cast<int>(1220 * fit), static_cast<int>(900 * fit));
+            }
 #else
             setContentComponentSize(ui::layout::screen.getWidth(), ui::layout::screen.getHeight());
 #endif

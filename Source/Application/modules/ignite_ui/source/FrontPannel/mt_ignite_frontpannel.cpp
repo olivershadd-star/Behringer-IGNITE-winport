@@ -135,7 +135,7 @@ bool FrountPannel::HandleKeyIndication(AppMainmode* AppMainmodeRef, paramId_t pa
     const bool modeKey = key == FrontPannelParam::paramKey_MENU || key == FrontPannelParam::paramKey_SONG
         || key == FrontPannelParam::paramKey_SCENE || key == FrontPannelParam::paramKey_TRACK
         || key == FrontPannelParam::paramKey_PATTERN || key == FrontPannelParam::paramKey_PAGESHIFT;
-    if (!modeKey && (KeyValue == 2 || KeyValue == 3 || key == FrontPannelParam::paramKey_TEMPO))
+    if (!modeKey && (KeyValue == 2 || KeyValue == 3 || key == FrontPannelParam::paramKey_TEMPO || key == FrontPannelParam::paramKey_ROTARYROW))
         return Handle_NavigationKey(AppMainmodeRef, param, KeyValue);
 #endif
 	/* Keeping all Keys, for Simulator and future improvments as Engine can send individula Key event */
