@@ -25,7 +25,9 @@ jobs:
         if: always()
         with:
           name: Desktop-screenshot
-          path: desktop-smoke.png
+          path: |
+            desktop-smoke.png
+            desktop-sequence-test.txt
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:

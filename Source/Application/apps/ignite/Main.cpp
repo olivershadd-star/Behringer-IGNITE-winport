@@ -26,6 +26,7 @@
  */
 #include <JuceHeader.h>
 #include <cstdlib>
+#include <cmath>
 
 using namespace Ignite;
 using namespace Ignite::Midi;
@@ -132,6 +133,28 @@ public:
                 stream.reset();
                 auto* model = static_cast<IgniteEngine*>(_PUiVirtualEngine.get());
                 ok = ok && model->songManager->get_tsf_instance() != nullptr;
+                // Exercise the original song/scene/track/pattern playback path on
+                // the isolated CI profile, with offline mixing instead of a driver.
+                auto* song = model->songManager;
+                if (song->dm != nullptr) song->dm->closeAudioDevice();
+                song->createSongWithRandomData(1, 1, 1, 2, 1, 1);
+                song->setActiveSong(song->getSongCount() - 1);
+                song->playSong(0);
+                double energy = 0;
+                for (int blockIndex = 0; blockIndex < 150; ++blockIndex) {
+                    float block[INTERNAL_AUDIO_20MS_BLOCK_SIZE]{};
+                    song->renderTracksAndMix(block);
+                    for (float sample : block) {
+                        if (!std::isfinite(sample)) ok = false;
+                        energy += static_cast<double>(sample) * sample;
+                    }
+                    juce::Thread::sleep(20);
+                }
+                song->stopSong();
+                ok = ok && energy > 0.0001;
+                juce::File::getCurrentWorkingDirectory().getChildFile("desktop-sequence-test.txt")
+                    .replaceWithText("Original sequencer offline playback energy: " + juce::String(energy, 8)
+                        + (ok ? " PASS" : " FAIL"));
                 // Test-only exit: the embedded upstream engine has detached perpetual threads.
                 std::_Exit(ok ? 0 : 2);
             });
