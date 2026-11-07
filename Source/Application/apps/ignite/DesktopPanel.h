@@ -149,8 +149,22 @@ private:
                 send(static_cast<Key>(item->id), 3); item->held = true;
             }
             if (item->momentary) {
-                const auto lit = engine.frontPannelManager->desktopLed(item->id) != 0;
-                item->button->setColour(juce::TextButton::buttonColourId, juce::Colour(lit ? 0xff187d92 : 0xff303b4d));
+                auto state = engine.frontPannelManager->desktopLed(item->id);
+                if (item->id >= 30 && item->id <= 45) {
+                    const auto rgb = engine.frontPannelManager->desktopLed(100u + item->id - 30u);
+                    if (rgb >= 0xa0) state = rgb;
+                }
+                auto colour = juce::Colour(0xff303b4d);
+                if (state == 2 || state == 4) colour = juce::Colour(0xff187d92);
+                else if (state >= 6 && state <= 11) {
+                    const bool phase = (juce::Time::getMillisecondCounter() / 250u) % 2u == 0;
+                    if (phase) colour = juce::Colour(0xff187d92);
+                } else if (state > 0xa0) {
+                    const juce::uint32 palette[] = {0xffdf5050, 0xff45b877, 0xff4588db, 0xffa368c9,
+                        0xffdddddd, 0xff64bdcf, 0xff78838f, 0xffc999df};
+                    colour = juce::Colour(palette[juce::jmin(7, static_cast<int>(state) - 0xa1)]);
+                }
+                item->button->setColour(juce::TextButton::buttonColourId, colour);
             }
         }
         auto* device = engine.songManager->dm ? engine.songManager->dm->getCurrentAudioDevice() : nullptr;

@@ -1755,7 +1755,11 @@ void FrontPannelManager::onParameterChange(moduleId_t moduleSrc, ParameterBase* 
 void FrontPannelManager::ParamHandler(moduleId_t moduleSrc, ParameterBase* param, bool SendNotification)
 {
 	paramId_t paramId = param->GetParamID();
-    if (paramId < 256) desktopLeds[paramId].store(param->getValue().get<uint8_t>());
+    if (paramId <= 88 || (paramId >= 100 && paramId <= 115)) {
+        const auto state = param->getValue().get<uint8_t>();
+        if (state != fpLEDPattern::EN_LED_PATT_NoChange)
+            desktopLeds[paramId].store(state);
+    }
 	uint8_t inPlace = 0xFF;
 #ifdef FP_TEST_KEYBRD
 	if (initDone && _toggleButtonArray[0] != nullptr)
