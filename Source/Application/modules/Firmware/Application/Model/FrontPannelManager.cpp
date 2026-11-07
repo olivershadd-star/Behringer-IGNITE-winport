@@ -97,15 +97,14 @@ juce::DialogWindow* Dwind;
 bool readwait = true;
 
 class FPKeys : public juce::Component,
-	public juce::KeyListener,
-	public juce::MouseListener
+	public juce::KeyListener
 {
 public:
 	FPKeys()
 	{
 		Component::setSize(500, 500);
 		Component::setTopLeftPosition(0, 0);
-		Component::setFocusContainer(true);
+		Component::setFocusContainerType(FocusContainerType::focusContainer);
 		Component::addKeyListener(this);
 	};
 	~FPKeys();
@@ -123,7 +122,7 @@ public:
 			_toggleButtonArrayVal[i] = 0;
 			addAndMakeVisible(_toggleButtonArray[i] = new juce::ToggleButton);
 			_toggleButtonArray[i]->setButtonText(LedDsp1_string[i]);
-			_toggleButtonArray[i]->setToggleState(_toggleButtonArrayVal[i], false);
+			_toggleButtonArray[i]->setToggleState(_toggleButtonArrayVal[i], juce::dontSendNotification);
 			_toggleButtonArray[i]->setBounds(10 * k, 50 + j, 400, 50);
 			_toggleButtonArray[i]->setColour(juce::ToggleButton::textColourId, juce::Colours::black);
 			_toggleButtonArray[i]->setColour(juce::ToggleButton::tickColourId, juce::Colours::darkred);
@@ -181,7 +180,6 @@ public:
 	{
         std::lock_guard<std::mutex> guard(keyQueueMutex);
 		bool MessageKeyCode = false;
-		uint8_t Keyinput = 1;
 		KeyCodeValue keyCodeValue = { 0, };
 		keyCodeValue.KeyValue = 1;
 		readwait = true;
@@ -463,12 +461,12 @@ void FrontPannelManager::handleCommandMessage(int id)
 		Dwind->addKeyListener(fpKeys);
 		Dwind->setTopLeftPosition(10, 600);
 	}
-	else if (3)
+	else if (id == 3)
 	{
 		_toggleButtonArrayVal_needupdate = false;
 		for (int i = 0; i < 61; i++)
 		{
-			_toggleButtonArray[i]->setToggleState(_toggleButtonArrayVal[i], false);
+			_toggleButtonArray[i]->setToggleState(_toggleButtonArrayVal[i], juce::dontSendNotification);
 		}
 	}
 }
@@ -1766,7 +1764,6 @@ void FrontPannelManager::ParamHandler(moduleId_t moduleSrc, ParameterBase* param
 		{
 			if (FpLedHandler->KetToLedPositionMapping[i] == paramId)
 			{
-				uint8_t val = (param->getValue().get<uint8_t>());
 				_toggleButtonArrayVal_needupdate = true;
 				//not handling here as it required to modify FP code, will be handled in handlemessage (command 3)
 				switch ((FrontPannelParam)paramId)

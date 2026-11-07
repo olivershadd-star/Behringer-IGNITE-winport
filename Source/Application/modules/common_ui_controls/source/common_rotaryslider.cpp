@@ -353,9 +353,9 @@ namespace ui
 				
 				if (currentValue > slider.getMinimum())
 				{
-					float value = (currentValue - (slider.getInterval()*ROTARY_FASTJUMP));
-					if(value > slider.getMinimum())
-						slider.setValue(value);
+					const double targetValue = (currentValue - (slider.getInterval()*ROTARY_FASTJUMP));
+					if(targetValue > slider.getMinimum())
+						slider.setValue(targetValue);
 					else 
 						slider.setValue(slider.getMinimum());
 
@@ -367,9 +367,9 @@ namespace ui
 			{
 				if (currentValue < slider.getMaximum())
 				{
-					float value = (currentValue + (slider.getInterval() * ROTARY_FASTJUMP));
-					if (value < slider.getMaximum())
-						slider.setValue(value);
+					const double targetValue = (currentValue + (slider.getInterval() * ROTARY_FASTJUMP));
+					if (targetValue < slider.getMaximum())
+						slider.setValue(targetValue);
 					else
 						slider.setValue(slider.getMaximum());
 
@@ -382,9 +382,9 @@ namespace ui
 
 				if (currentValue > slider.getMinimum())
 				{
-					float value = (currentValue - (slider.getInterval() * ROTARY_SUPERFASTJUMP));
-					if (value > slider.getMinimum())
-						slider.setValue(value);
+					const double targetValue = (currentValue - (slider.getInterval() * ROTARY_SUPERFASTJUMP));
+					if (targetValue > slider.getMinimum())
+						slider.setValue(targetValue);
 					else
 						slider.setValue(slider.getMinimum());
 
@@ -396,9 +396,9 @@ namespace ui
 			{
 				if (currentValue < slider.getMaximum())
 				{
-					float value = (currentValue + (slider.getInterval() * ROTARY_SUPERFASTJUMP));
-					if (value < slider.getMaximum())
-						slider.setValue(value);
+					const double targetValue = (currentValue + (slider.getInterval() * ROTARY_SUPERFASTJUMP));
+					if (targetValue < slider.getMaximum())
+						slider.setValue(targetValue);
 					else
 						slider.setValue(slider.getMaximum());
 

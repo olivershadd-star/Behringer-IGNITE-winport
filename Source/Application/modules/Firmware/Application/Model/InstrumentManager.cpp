@@ -1121,8 +1121,8 @@ void InstrumentManager::getParam (moduleId_t moduleSrc, paramId_t param)
 
 std::string InstrumentManager::addInstrument (void)
 {
-	uint8_t port = -1;//set some default value
-	uint8_t chan = -1;//set some default value
+	uint8_t port = 0xff;//set some default value
+	uint8_t chan = 0xff;//set some default value
 
 	std::string name;
 
