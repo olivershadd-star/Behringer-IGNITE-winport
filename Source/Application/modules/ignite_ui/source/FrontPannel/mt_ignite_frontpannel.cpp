@@ -128,6 +128,16 @@ void FrountPannel::EnginePublish(moduleId_t module, moduleId_t moduleSrc, paramI
 bool FrountPannel::HandleKeyIndication(AppMainmode* AppMainmodeRef, paramId_t param, uint8_t KeyValue)
 {
 	bool handled = true;
+#if defined(IGNITE_DESKTOP)
+    // The diagnostic path formerly dropped button releases and holds. The
+    // virtual panel supplies them just as the physical KeyDataReady path does.
+    const auto key = static_cast<FrontPannelParam>(param);
+    const bool modeKey = key == FrontPannelParam::paramKey_MENU || key == FrontPannelParam::paramKey_SONG
+        || key == FrontPannelParam::paramKey_SCENE || key == FrontPannelParam::paramKey_TRACK
+        || key == FrontPannelParam::paramKey_PATTERN || key == FrontPannelParam::paramKey_PAGESHIFT;
+    if (!modeKey && (KeyValue == 2 || KeyValue == 3 || key == FrontPannelParam::paramKey_TEMPO))
+        return Handle_NavigationKey(AppMainmodeRef, param, KeyValue);
+#endif
 	/* Keeping all Keys, for Simulator and future improvments as Engine can send individula Key event */
 	if (((FrontPannelKeyStatus)KeyValue == FrontPannelKeyStatus::paramKeyStatusPressed && param != (paramId_t)FrontPannelParam::paramKey_TEMPO) || ((FrontPannelParam)param >= FrontPannelParam::paramKey_ROTARY_NAV && (FrontPannelParam)param <= FrontPannelParam::paramRot_BAR))
 	{

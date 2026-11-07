@@ -47,16 +47,16 @@ public:
              {">", Key::paramKey_RMOVERIGHT}}, 14, 714, 104);
         shift.setButtonText("SHIFT (hold)"); shift.setClickingTogglesState(true);
         surface.addAndMakeVisible(shift); shift.setBounds(14, 752, 116, 30);
-        shift.onClick = [this] { send(Key::paramKey_SHIFT, shift.getToggleState() ? 1 : 2); };
+        shift.onClick = [this] { send(Key::paramKey_PAGESHIFT, 1); };
         row({{"LAST", Key::paramKey_LAST}, {"FILL", Key::paramKey_FILL_X},
              {"SOLO / SKIP", Key::paramKey_SOLO_SKIP}, {"GANG", Key::paramKey_GANG},
              {"NEXT / TIE", Key::paramKey_NEXT_TIE}, {"SCULPT", Key::paramKey_SCULPT}}, 140, 752, 116);
         for (int i = 0; i < 16; ++i) {
             const int x = 14 + i * 75;
             control(juce::String(i + 1), static_cast<Key>(static_cast<int>(Key::paramKey_TRACKSEL1) + i), {x, 794, 70, 40});
-            const auto encoder = static_cast<Key>(static_cast<int>(Key::paramKey_TRACKROTARY1) + i);
+            const auto encoder = static_cast<Key>(static_cast<int>(Key::paramRot_PADROT1) + i);
             control("-", encoder, {x, 840, 22, 28}, 0, false);
-            control("o", encoder, {x + 24, 840, 22, 28}, 2, false);
+            control("o", static_cast<Key>(static_cast<int>(Key::paramKey_TRACKROTARY1) + i), {x + 24, 840, 22, 28});
             control("+", encoder, {x + 48, 840, 22, 28}, 1, false);
         }
         const std::pair<const char*, Key> knobs[] = {{"RELEASE", Key::paramKey_RELEASE}, {"FILTER", Key::paramKey_FILTER},
@@ -71,8 +71,12 @@ public:
             control("-", knobs[i].second, {x, y + 32, 38, 32}, 0, false);
             control("+", knobs[i].second, {x + 42, y + 32, 38, 32}, 1, false);
         }
-        control("ROW", Key::paramKey_ROTARYROW, {8, 596, 82, 32});
-        control("BAR", Key::paramKey_ROTARYBAR, {1130, 596, 82, 32});
+        control("ROW", Key::paramKey_ROTARYROW, {8, 570, 82, 32});
+        control("-", Key::paramRot_ROW, {8, 608, 38, 28}, 0, false);
+        control("+", Key::paramRot_ROW, {50, 608, 38, 28}, 1, false);
+        control("BAR", Key::paramKey_ROTARYBAR, {1130, 570, 82, 32});
+        control("-", Key::paramRot_BAR, {1130, 608, 38, 28}, 0, false);
+        control("+", Key::paramRot_BAR, {1172, 608, 38, 28}, 1, false);
         startTimerHz(20);
     }
     ~DesktopPanel() override { stopTimer(); surface.removeChildComponent(&screen); }
@@ -149,7 +153,7 @@ private:
                 item->button->setColour(juce::TextButton::buttonColourId, juce::Colour(lit ? 0xff187d92 : 0xff303b4d));
             }
         }
-        const auto* device = engine.songManager->dm ? engine.songManager->dm->getCurrentAudioDevice() : nullptr;
+        auto* device = engine.songManager->dm ? engine.songManager->dm->getCurrentAudioDevice() : nullptr;
         status.setText(juce::String(engine.songManager->get_tsf_instance() ? "GM bank loaded" : "Missing Ignite.sf2")
             + "  |  " + (device ? device->getName() + " / " + juce::String(device->getCurrentSampleRate(), 0) + " Hz" : "No audio output - open Audio settings"), juce::dontSendNotification);
     }
