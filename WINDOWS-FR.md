@@ -1,6 +1,6 @@
 # IGNITE : adaptation communautaire Windows x64
 
-Prototype source issu de l'archive 0716-AAF. Ce paquet n'est pas une version officielle Behringer et ne contient pas d'executable valide sous Windows a ce stade.
+Prototype source issu de l'archive 0716-AAF. Ce portage n'est pas une version officielle Behringer. La compilation Windows x64 a reussi dans GitHub Actions (run 42388196042) ; l'archive produite contient Ignite.exe et ses ressources. Le fonctionnement interactif et audio reste a tester sur un PC Windows.
 
 ## Compiler
 
@@ -13,7 +13,7 @@ Depuis PowerShell, dans ce dossier :
 ./build-windows.ps1 -SoundFont 'D:\Samples\MaBanque.sf2'
 ```
 
-Le resultat attendu est `dist/Ignite-Windows-x64/Ignite.exe` avec `assets/` a ses cotes. L'archive portable est dans `dist/`. En cas de nouvelle construction, renommer le dossier et le ZIP precedents. Le workflow `.github/workflows/windows-desktop.yml` permet la meme compilation sur GitHub Actions ; il est fourni, mais n'a pas ete execute ici.
+Le resultat attendu est `dist/Ignite-Windows-x64/Ignite.exe` avec `assets/` a ses cotes. L'archive portable est dans `dist/`. En cas de nouvelle construction, renommer le dossier et le ZIP precedents. Le workflow `.github/workflows/windows-desktop.yml` permet la meme compilation sur GitHub Actions ; il a ete execute avec succes sur GitHub Actions.
 
 ## Sons et donnees
 
@@ -37,6 +37,6 @@ Le simulateur de facade fourni dans le projet original est active sous Windows. 
 
 ## Verification et limites
 
-Le test C++ de l'adaptateur audio verifie la continuite du flux, les tailles de buffers variables, les canaux nuls, les sentinelles et le reset ; il a ete execute sous Linux avec AddressSanitizer et UndefinedBehaviorSanitizer. L'application complete n'a PAS ete compilee ou executee sous Windows. Des erreurs heritees du projet peuvent subsister. Le routage MIDI garde les noms et conventions du materiel d'origine : un selecteur de ports Windows generique reste a developper. CV/Gate et firmware MCU necessitent du materiel. Sauvegarde, restauration, fermeture des threads, commandes du simulateur et synchronisation notes/audio doivent etre testes sur Windows. Cette livraison est une base de portage, pas une application finalisee.
+Le test C++ de l'adaptateur audio verifie la continuite du flux, les tailles de buffers variables, les canaux nuls, les sentinelles et le reset ; il a ete execute sous Linux avec AddressSanitizer et UndefinedBehaviorSanitizer. L'application complete a ete compilee en Release sous Windows avec MSVC ; elle n'a pas ete testee interactivement. L'integrite du ZIP, le format PE x64 de l'executable et la presence des ressources ont ete verifies. Des erreurs heritees du projet peuvent subsister. Le routage MIDI garde les noms et conventions du materiel d'origine : un selecteur de ports Windows generique reste a developper. CV/Gate et firmware MCU necessitent du materiel. Sauvegarde, restauration, fermeture des threads, commandes du simulateur et synchronisation notes/audio doivent etre testes sur Windows. Cette livraison est une base de portage, pas une application finalisee.
 
 Code Music Tribe sous AGPL-3.0-or-later ; conserver les notices et licences tierces. Les marques et images ne sont pas couvertes par la licence du code. Voir README.md et LICENSE.
