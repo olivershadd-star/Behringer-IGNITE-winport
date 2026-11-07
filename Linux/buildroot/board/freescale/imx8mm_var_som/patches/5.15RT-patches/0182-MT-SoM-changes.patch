@@ -1,0 +1,46 @@
+From 5afa9b2e64db583a6d7773852395bec3ac34ba69 Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Wed, 14 Feb 2024 16:38:44 +0530
+Subject: [PATCH] MT SoM changes
+
+Signed-off-by: MUSIC Tribe
+---
+ arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
+index 9be15fc27..c0f8726e8 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
+@@ -217,8 +217,8 @@
+ 		reg = <0x4b>;
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&pinctrl_pmic>;
+-		interrupt-parent = <&gpio2>;
+-		interrupts = <8 IRQ_TYPE_LEVEL_LOW>;
++		interrupt-parent = <&gpio1>;
++		interrupts = <9 IRQ_TYPE_LEVEL_LOW>;
+ 		rohm,reset-snvs-powered;
+ 		status = "okay";
+ 
+@@ -347,7 +347,7 @@
+ 			interrupt-parent = <&gpio5>; 					/* Use the correct gpio controller here */
+ 			interrupts = <25 IRQ_TYPE_EDGE_FALLING>;				/* setu: IRQ_TYPE_NONE not working, try with IRQ_TYPE_EDGE_FALLING and IRQ_TYPE_EDGE_RISING */
+ 			irq-gpios = <&gpio5 25 GPIO_ACTIVE_HIGH>;
+-			reset-gpios = <&gpio4 4 GPIO_ACTIVE_LOW>;  /*Use the correct gpio controller and pin */			
++			reset-gpios = <&gpio3 21 GPIO_ACTIVE_LOW>;  /*Use the correct gpio controller and pin */
+ 			touchscreen-size-x = <800>;
+ 			touchscreen-size-y = <480>;
+            status = "okay";
+@@ -591,7 +591,7 @@
+ 
+ 	pinctrl_pmic: pmicgrp {
+ 		fsl,pins = <
+-			MX8MM_IOMUXC_SD1_DATA6_GPIO2_IO8		0x140
++			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9		0x140
+ 		>;
+ 	};
+ 
+-- 
+2.17.1
+

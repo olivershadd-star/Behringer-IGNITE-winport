@@ -1,0 +1,92 @@
+# https://aka.ms/yaml
+
+resources:
+  repositories:
+    - repository: Source
+      type: git
+      name: Source
+      ref: ui_dev
+
+trigger:
+  - ui_dev
+
+schedules:
+- cron: "0 12 * * 4"
+  displayName: Weekly
+  always: true
+  branches:
+    include:
+    - ui_dev
+
+jobs:
+- job: build
+  timeoutInMinutes: 0
+  strategy:
+    matrix:
+      linux:
+        imageName: 'ubuntu20.04'
+        isApp: True
+
+  pool:
+    name: Ubuntu20.04
+
+  steps:
+    - checkout: self
+      clean: true
+
+    # --- Build Ignite Linux App ---
+    - task: Bash@3
+      condition: variables.isApp
+      displayName: "Build Ignite App for Linux"
+      inputs:
+        targetType: 'inline'
+        script: |
+          cd $(Build.SourcesDirectory)/
+          bash ./CI/azure_build.sh "isApp"
+    - task: CopyFiles@2
+      condition: variables.isApp
+      displayName : "Copy Release App Image"
+      inputs:
+        SourceFolder : '$(Build.SourcesDirectory)/Application/apps/ignite/Ignite_artefacts/Release'
+        Contents : '**'
+        TargetFolder : '$(Build.ArtifactStagingDirectory)/Linux_Images/Application'
+
+    - task: CopyFiles@2
+      condition: variables.isApp
+      displayName : "Copy Debug App Image"
+      inputs:
+        SourceFolder : '$(Build.SourcesDirectory)/Application/apps/ignite/Ignite_artefacts/Debug'
+        Contents : '**'
+        TargetFolder : '$(Build.ArtifactStagingDirectory)/Linux_Images/Application_dbg'
+
+    - task: CopyFiles@2
+      condition: variables.isApp
+      displayName : "Copy assets"
+      inputs:
+        SourceFolder : '$(Build.SourcesDirectory)/Application/assets'
+        Contents : '**'
+        TargetFolder : '$(Build.ArtifactStagingDirectory)/Linux_Images/Application_dbg/assets/'
+
+    - task: CopyFiles@2
+      condition: variables.isApp
+      displayName : "Copy assets"
+      inputs:
+        SourceFolder : '$(Build.SourcesDirectory)/Application/assets'
+        Contents : '**'
+        TargetFolder : '$(Build.ArtifactStagingDirectory)/Linux_Images/Application/assets/'
+
+    - task: PublishBuildArtifacts@1
+      condition: variables.isApp
+      displayName: "upload Ignite App binaries"
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/'
+        ArtifactName: 'IgniteArtifacts'
+        publishLocation: 'Container'
+
+    - task: Bash@3
+      condition: variables.isApp
+      displayName : "Clean work space"
+      inputs:
+        targetType: 'inline'
+        script: |
+          sudo rm -rf  $(Build.SourcesDirectory)

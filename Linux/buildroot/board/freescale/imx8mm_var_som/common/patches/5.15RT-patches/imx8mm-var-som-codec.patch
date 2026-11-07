@@ -1,0 +1,126 @@
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-var-som.dtsi b/arch/arm64/boot/dts/freescale/imx8mm-var-som.dtsi
+index d34faae280e5..a7fbb82f76d5 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mm-var-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx8mm-var-som.dtsi
+@@ -52,12 +52,21 @@ reserved-memory {
+ 		/delete-node/ linux,cma;
+ 	};
+ 
+-	sound-wm8904 {
++
++/* Below entry is for Cool Audio codec V4220M : setu */
++	sound-v4220m {
+ 		compatible = "simple-audio-card";
+ 		simple-audio-card,bitclock-master = <&dailink_master>;
+ 		simple-audio-card,format = "i2s";
+ 		simple-audio-card,frame-master = <&dailink_master>;
+-		simple-audio-card,name = "wm8904-audio";
++		simple-audio-card,name = "v4220m-audio";		
++		/* audio-codec = <&codec>;		
++		cpu-dai = <&sai2>; */
++
++		simple-audio-card,widgets =
++			"Microphone", "Microphone Jack",
++			"Headphone", "Headphone Jack",
++			"Line", "Line In Jack";
+ 		simple-audio-card,routing =
+ 			"Headphone Jack", "HPOUTL",
+ 			"Headphone Jack", "HPOUTR",
+@@ -65,21 +74,27 @@ sound-wm8904 {
+ 			"IN2R", "Line In Jack",
+ 			"IN1L", "Microphone Jack",
+ 			"IN1R", "Microphone Jack";
+-		simple-audio-card,widgets =
+-			"Microphone", "Microphone Jack",
+-			"Headphone", "Headphone Jack",
+-			"Line", "Line In Jack";
+-		simple-audio-card,mclk-fs = <256>;
+-
+-		dailink_master: simple-audio-card,codec {
+-			sound-dai = <&wm8904>;
++		simple-audio-card,mclk-fs = <256>;	
++		simple-audio-card,codec {		
++			sound-dai = <&codec1>;
+ 		};
+-
+-		simple-audio-card,cpu {
+-			sound-dai = <&sai5>;
++		dailink_master: simple-audio-card,cpu {
++			sound-dai = <&sai2>;
++			clock-names = "mclk";
++			/* clocks = <&clk IMX8MM_CLK_SAI2_ROOT>; */
++			/* system-clock-frequency = <883200>;     setus:  in order to get an LRCLK of 48 kHz */
+ 		};
+ 	};
+-
++	
++	codec1: codec1 {
++//		compatible = "linux,snd-soc-dummy"; 
++		compatible = "linux,bt-sco";		
++		clocks = <&clk IMX8MM_CLK_SAI2_ROOT>;
++		clock-names = "mclk";
++		#sound-dai-cells = <0>;
++		status = "okay";
++    };
++	
+ 	sound-spdif {
+ 		compatible = "fsl,imx-audio-spdif";
+ 		model = "imx-spdif";
+@@ -358,6 +373,20 @@ wm8904: audio-codec@1a {
+ 	};
+ };
+ 
++/* setu: added for v4220m coolaudio codec*/
++&sai2 {
++	#sound-dai-cells = <0>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_sai2>;
++	assigned-clocks = <&clk IMX8MM_CLK_SAI2>;
++	assigned-clock-parents = <&clk IMX8MM_AUDIO_PLL1_OUT>;
++	/* assigned-clock-rates = <1536000>; */
++	assigned-clock-rates = <12288000>;        /*setu: this is supposed to be our MCLK */
++	fsl,sai-synchronous-rx;
++	fsl,sai-mclk-direction-output;
++	status = "okay";
++};
++/*
+ &sai5 {
+ 	#sound-dai-cells = <0>;
+ 	pinctrl-names = "default";
+@@ -369,6 +398,7 @@ &sai5 {
+ 	dmas = <&sdma2 8 25 0>, <&sdma2 9 25 0>;
+ 	status = "okay";
+ };
++*/
+ 
+ &spdif1 {
+ 	pinctrl-names = "default";
+@@ -630,7 +660,27 @@ MX8MM_IOMUXC_SAI5_RXD2_SAI5_TX_BCLK		0xd6
+ 			MX8MM_IOMUXC_SAI5_MCLK_SAI5_MCLK		0xd6
+ 		>;
+ 	};
+-
++	/* setu: V4220M codec settings
++	I2S_DAT_ADC (SAI2_RXD0)    (SAI2_RXD0/SAI5_TXD0////UART1_RTS_B/////GPIO4_IO23)            -->> MX8MM_IOMUXC_SAI2_RXD0_SAI2_RX_DATA0
++	I2S_DAT_DAC (SAI2_TXD0)    (SAI2_TXD0/SAI5_TXD3/////GPIO4_IO26)                           -->> MX8MM_IOMUXC_SAI2_TXD0_SAI2_TX_DATA0
++	I2S_BCLK    (SAI2_RXC)     (SAI2_RXC/SAI5_TXC///UART1_RXD/////GPIO4_IO22)                 -->> MX8MM_IOMUXC_SAI2_RXC_SAI2_RX_BCLK
++	I2S_LRCK    (SAI2_RXFS)    (SAI2_RXFS/SAI5_TXFS//SAI5_TXD1///SAI2_RXD////UART1_TXD/////GPIO4_IO21) -->>  MX8MM_IOMUXC_SAI2_RXFS_SAI2_RX_SYNC
++	I2S_MCLK    (SAI2_MCLK)     (SAI2_MCLK/SAI5_MCLK/////GPIO4_IO27)                         -->>  MX8MM_IOMUXC_SAI2_MCLK_SAI2_MCLK
++	
++	nMUTE_SOM   (GPIO4_IO25)   (SAI2_TXC/SAI5_TXD2/////GPIO4_IO25)                             -->> MX8MM_IOMUXC_SAI2_TXC_GPIO4_IO25
++	nCODEC_RST  (GPIO4_IO24)   (SAI2_TXFS/SAI5_TXD1///SAI2_TXD1////UART1_CTS_B/////GPIO4_IO24) -->> MX8MM_IOMUXC_SAI2_TXFS_GPIO4_IO24
++	*/
++	pinctrl_sai2: sai2grp {
++		fsl,pins = <
++		/*	MX8MM_IOMUXC_SAI2_TXFS_SAI2_TX_SYNC		0xd6        updated.. MAY BE, NOT Required coz may b needed by nCODEC_RST */
++			MX8MM_IOMUXC_SAI2_RXFS_SAI2_RX_SYNC		0xd6       /* there : Required for I2S_LRCLK*/
++			MX8MM_IOMUXC_SAI2_TXD0_SAI2_TX_DATA0		0xd6   /* updated DAT_DAC : Required for I2S_DAT_DAC */
++			MX8MM_IOMUXC_SAI2_RXD0_SAI2_RX_DATA0		0xd6  /* there DAT_ADC : Required for I2S_DAT_ADC */
++			MX8MM_IOMUXC_SAI2_RXC_SAI2_RX_BCLK		0xd6      /*  there: Required for I2S_BCLK: but ambigous, cant use since its used by SDCard: pinctrl_reg_usdhc2_vmmc */
++		/*	MX8MM_IOMUXC_SAI2_TXC_SAI2_TX_BCLK		0xd6       updated ..  MAY BE, NOT Required coz may b needed by nMUTE_SOM*/
++			MX8MM_IOMUXC_SAI2_MCLK_SAI2_MCLK		0xd6      /* there : Required for I2S_MCLK*/
++		>;
++	};
+ 	pinctrl_spdif1: spdif1grp {
+ 		fsl,pins = <
+ 			MX8MM_IOMUXC_SPDIF_TX_SPDIF1_OUT		0xd6

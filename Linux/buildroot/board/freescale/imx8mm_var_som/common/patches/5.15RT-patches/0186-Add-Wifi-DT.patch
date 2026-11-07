@@ -1,0 +1,32 @@
+From 4f44f04952ae83559309ee087b642e13b1b1f8e1 Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Mon, 17 Jun 2024 16:28:54 +0530
+Subject: [PATCH] Add wifi dt entry for sd8997
+
+Signed-off-by: MUSIC Tribe
+---
+ arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
+index c0f8726e8..f9b76c2bb 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
+@@ -435,10 +435,11 @@
+ 	keep-power-in-suspend;
+ 	status = "okay";
+ 
+-	brcmf: wifi@1 {
++	nxp: wifi@1 {
++		compatible = "marvell,sd8997";
+ 		reg = <1>;
+-		compatible = "brcm,bcm4329-fmac";
+-		laird,regdomain = "US";
++		interrupts = <2 0>;
++		interrupt-names = "host-wake";
+ 	};
+ };
+ 
+-- 
+2.17.1
+

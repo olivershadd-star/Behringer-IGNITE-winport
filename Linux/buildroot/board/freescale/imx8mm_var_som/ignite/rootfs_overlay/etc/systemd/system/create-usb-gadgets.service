@@ -1,0 +1,15 @@
+[Unit]
+Description=Create USB gadgets
+Before=weston@root.service
+
+[Service]
+Type=simple
+ExecStart=/bin/sh /usr/bin/create-usb-gadgets.sh &
+PIDFile=/var/run/gadget.pid
+StandardInput=tty
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

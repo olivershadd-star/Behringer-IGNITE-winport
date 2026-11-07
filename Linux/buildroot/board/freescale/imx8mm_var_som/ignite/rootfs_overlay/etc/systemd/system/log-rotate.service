@@ -1,0 +1,5 @@
+[Unit]
+Description="Log rotate script"
+
+[Service]
+ExecStart=logrotate --force /etc/logrotate.conf

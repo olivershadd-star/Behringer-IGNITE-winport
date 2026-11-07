@@ -1,0 +1,70 @@
+diff --git a/include/configs/imx8mm_var_dart.h b/include/configs/imx8mm_var_dart.h
+index 9b04e6491..cbc67e997 100644
+--- a/include/configs/imx8mm_var_dart.h
++++ b/include/configs/imx8mm_var_dart.h
+@@ -64,7 +64,8 @@
+ /* Initial environment variables */
+ #define CONFIG_EXTRA_ENV_SETTINGS		\
+ 	CONFIG_MFG_ENV_SETTINGS \
+-	"bootdir=/boot\0"	\
++	"bootdir=/\0"	\
++	"emmc_boot=0\0"	\
+ 	"script=boot.scr\0" \
+ 	"image=Image.gz\0" \
+ 	"console=undefined\0" \
+@@ -73,7 +74,7 @@
+ 	"fdt_high=0xffffffffffffffff\0"		\
+ 	"boot_fdt=try\0" \
+ 	"ip_dyn=yes\0" \
+-	"fdt_file=undefined\0" \
++	"fdt_file=imx8mm-var-som-symphony.dtb\0" \
+ 	"mmcdev="__stringify(CONFIG_SYS_MMC_ENV_DEV)"\0" \
+ 	"mmcblk=1\0" \
+ 	"mmcautodetect=yes\0" \
+@@ -102,11 +103,19 @@
+ 		"fi; \0" \
+ 	"mmcargs=run setconsole; setenv bootargs console=${console} " \
+ 		"root=/dev/mmcblk${mmcblk}p${mmcpart} rootwait rw ${cma_size}\0 " \
++	"mmcargs0=setenv bootargs console=ttymxc3,115200 earlycon=ec_imx6q,0x30a60000,115200 " \
++		"root=/dev/mmcblk2p2 rootwait ro \0 " \
++	"mmcargs1=setenv bootargs console=ttymxc3,115200 earlycon=ec_imx6q,0x30a60000,115200 " \
++		"root=/dev/mmcblk2p5 rootwait ro \0 " \
+ 	"loadbootscript=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootdir}/${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
+ 		"source\0" \
+ 	"loadimage=load mmc ${mmcdev}:${mmcpart} ${img_addr} ${bootdir}/${image};" \
+ 		"unzip ${img_addr} ${loadaddr}\0" \
++	"loadimage0=load mmc ${mmcdev}:1 ${img_addr} ${bootdir}${image};" \
++		"unzip ${img_addr} ${loadaddr}\0" \
++	"loadimage1=load mmc ${mmcdev}:4 ${img_addr} ${bootdir}${image};" \
++		"unzip ${img_addr} ${loadaddr}\0" \
+ 	"findfdt=" \
+ 		"if test $fdt_file = undefined; then " \
+ 			"if test $board_name = VAR-SOM-MX8M-MINI; then " \
+@@ -126,6 +135,12 @@
+ 	"loadfdt=run findfdt; " \
+ 		"echo fdt_file=${fdt_file}; " \
+ 		"load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${bootdir}/${fdt_file}\0" \
++	"loadfdt0=run findfdt; " \
++		"echo fdt_file=${fdt_file}; " \
++		"load mmc ${mmcdev}:1 ${fdt_addr} ${bootdir}${fdt_file}\0" \
++	"loadfdt1=run findfdt; " \
++		"echo fdt_file=${fdt_file}; " \
++		"load mmc ${mmcdev}:4 ${fdt_addr} ${bootdir}${fdt_file}\0" \
+ 	"ramsize_check="\
+ 		"if test $sdram_size -le 512; then " \
+ 			"setenv cma_size cma=320M; " \
+@@ -133,10 +148,11 @@
+ 			"setenv cma_size cma=640M@1376M; " \
+ 		"fi;\0" \
+ 	"mmcboot=echo Booting from mmc ...; " \
+-		"run mmcargs; " \
++		"run mmcargs${emmc_boot}; " \
++		"run loadimage${emmc_boot}; " \
+ 		"run optargs; " \
+ 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+-			"if run loadfdt; then " \
++			"if run loadfdt${emmc_boot}; then " \
+ 				"booti ${loadaddr} - ${fdt_addr}; " \
+ 			"else " \
+ 				"echo WARN: Cannot load the DT; " \

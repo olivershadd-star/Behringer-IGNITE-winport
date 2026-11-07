@@ -1,0 +1,6 @@
+#Add USB host port attach/detach rules
+ACTION=="add", KERNEL=="sd[a-z]*", RUN+="/bin/sh /usr/bin/hostUsbMount.sh 1 %k"
+ACTION=="remove", KERNEL=="sd[a-z]*", RUN+="/bin/sh /usr/bin/hostUsbMount.sh 0 %k"
+# For USB midi devices connected at host port
+ACTION=="add", SUBSYSTEM=="usb", ATTR{rx_lanes}=="1", ATTR{tx_lanes}=="1", RUN+="/bin/sh /usr/bin/usbHostMidiDeviceAdd.sh"
+ACTION=="remove", SUBSYSTEM=="usb", RUN+="/bin/sh /usr/bin/usbHostMidiDeviceRemove.sh"

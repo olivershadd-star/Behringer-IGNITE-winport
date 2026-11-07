@@ -1,0 +1,61 @@
+diff --git a/sound/soc/fsl/fsl_sai.c b/sound/soc/fsl/fsl_sai.c
+index 5cf671139324..b3340367569b 100644
+--- a/sound/soc/fsl/fsl_sai.c
++++ b/sound/soc/fsl/fsl_sai.c
+@@ -31,6 +31,7 @@
+ #include "fsl_sai.h"
+ #include "imx-pcm.h"
+ 
++#define dev_dbg dev_err
+ #define FSL_SAI_FLAGS (FSL_SAI_CSR_SEIE |\
+ 		       FSL_SAI_CSR_FEIE)
+ 
+@@ -145,8 +146,7 @@ static irqreturn_t fsl_sai_isr(int irq, void *devid)
+ 
+ 	if (flags)
+ 		regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), flags | xcsr);
+-
+-out:
++	out:
+ 	if (irq_none)
+ 		return IRQ_NONE;
+ 	else
+@@ -438,6 +438,7 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
+ 	u32 id;
+ 	int ret = 0;
+ 
++	dev_dbg(dai->dev, "fsl_sai_set_bclk FUNCTION START---->\n");
+ 	/* Don't apply to slave mode */
+ 	if (sai->slave_mode[tx])
+ 		return 0;
+@@ -523,9 +524,10 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
+ 				FSL_SAI_MCTL_MCLK_EN, FSL_SAI_MCTL_MCLK_EN);
+ 	}
+ 
+-	dev_dbg(dai->dev, "best fit: clock id=%d, ratio=%d, deviation=%d\n",
++	dev_dbg(dai->dev, "########################best fit: clock id=%d, ratio=%d, deviation=%d\n",
+ 			sai->mclk_id[tx], saveratio, savesub);
+ 
++	dev_dbg(dai->dev, "fsl_sai_set_bclk FUNCTION END---->\n");
+ 	return 0;
+ }
+ 
+@@ -554,6 +556,8 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
+ 		slots = sai->slots;
+ 	else if (sai->bclk_ratio)
+ 		slots = sai->bclk_ratio / slot_width;
++	dev_dbg(cpu_dai->dev,"Kick ->>>>>>>>>>>>> channels:%d word_width=%d rate=%d sai_bclk_Ratio %d \n",channels,word_width,rate,sai->bclk_ratio);
++	
+ 
+ 	pins = DIV_ROUND_UP(channels, slots);
+ 	sai->is_dsd = fsl_is_dsd(params);
+@@ -581,6 +585,9 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
+ 
+ 	bclk = rate*(sai->bclk_ratio ? sai->bclk_ratio : slots * slot_width);
+ 
++	 dev_dbg(cpu_dai->dev,"Kick ->>>>>>>>>>>>> Kick Rate:%d sai->biclk_ration=%d slots = %d slots_width%d \n", rate,sai->bclk_ratio,slots,slot_width);
++       dev_dbg(cpu_dai->dev,"Kick ->>>>>>>>>>>>> Kick BCLK: %d\n", bclk);
++
+ 	if (!IS_ERR_OR_NULL(sai->pinctrl)) {
+ 		sai->pins_state = fsl_get_pins_state(sai->pinctrl, params, bclk);
+ 

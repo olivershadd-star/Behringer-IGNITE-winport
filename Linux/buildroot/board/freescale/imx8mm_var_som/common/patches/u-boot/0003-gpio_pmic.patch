@@ -1,0 +1,102 @@
+diff --git a/board/variscite/imx8mm_var_dart/imx8mm_var_dart.c b/board/variscite/imx8mm_var_dart/imx8mm_var_dart.c
+index 83e2555708e..f03e85abcdc 100644
+--- a/board/variscite/imx8mm_var_dart/imx8mm_var_dart.c
++++ b/board/variscite/imx8mm_var_dart/imx8mm_var_dart.c
+@@ -26,8 +26,13 @@ extern int var_setup_mac(struct var_eeprom *eeprom);
+ 
+ #define GPIO_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1 | PAD_CTL_PUE | PAD_CTL_PE)
+ 
++#define TFT_GPIO         IMX_GPIO_NR(4, 11)
++#define CV_GPIO          IMX_GPIO_NR(1, 00)
++#define SDCARD_RESET    IMX_GPIO_NR(2, 19)
++#define EN_PWR_ON       IMX_GPIO_NR(4, 5)
++
+ #ifdef CONFIG_SPL_BUILD
+-#define ID_GPIO 	IMX_GPIO_NR(2, 11)
++#define ID_GPIO 	 IMX_GPIO_NR(2, 11)
+ 
+ static iomux_v3_cfg_t const id_pads[] = {
+ 	IMX8MM_PAD_SD1_STROBE_GPIO2_IO11 | MUX_PAD_CTRL(GPIO_PAD_CTRL),
+@@ -242,6 +247,15 @@ int board_late_init(void)
+ #ifdef CONFIG_ENV_IS_IN_MMC
+ 	board_late_mmc_env_init();
+ #endif
++	
++        gpio_request(TFT_GPIO, "board_tft");
++        gpio_request(CV_GPIO, "board_cvGate");
++        gpio_direction_output(TFT_GPIO, 0);
++        gpio_direction_output(CV_GPIO, 1);
++        gpio_request(SDCARD_RESET, "sdcard_reset");
++        gpio_request(EN_PWR_ON, "5v_enable");
++	gpio_direction_output(SDCARD_RESET, 1);
++        gpio_direction_output(EN_PWR_ON, 1);
+ 
+ 	return 0;
+ }
+diff --git a/board/variscite/imx8mm_var_dart/spl.c b/board/variscite/imx8mm_var_dart/spl.c
+index 32c4ea8f51e..8d12047eb10 100644
+--- a/board/variscite/imx8mm_var_dart/spl.c
++++ b/board/variscite/imx8mm_var_dart/spl.c
+@@ -78,6 +78,11 @@ static void spl_dram_init(void)
+ 
+ #define USDHC2_PWR_GPIO_DART	IMX_GPIO_NR(2, 19)
+ #define USDHC2_PWR_GPIO_SOM	IMX_GPIO_NR(4, 22)
++#define TFT_GPIO         IMX_GPIO_NR(4, 11)
++
++#define SDCARD_RESET	IMX_GPIO_NR(2, 19)
++#define EN_PWR_ON	IMX_GPIO_NR(4, 5)
++
+ 
+ #define USDHC_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_HYS | PAD_CTL_PUE |PAD_CTL_PE | \
+ 			 PAD_CTL_FSEL2)
+@@ -202,11 +207,32 @@ int power_init_board(void)
+ 	p = pmic_get("BD71837");
+ 	pmic_probe(p);
+ 
+-	/* decrease RESET key long push time from the default 10s to 10ms */
+-	pmic_reg_write(p, BD71837_PWRONCONFIG1, 0x0);
+-
++	uint32_t Value=0;
+ 	/* unlock the PMIC regs */
+-	pmic_reg_write(p, BD71837_REGLOCK, 0x1);
++	pmic_reg_write(p, BD71837_REGLOCK, 0x00);
++	/* decrease RESET key long push time from the default 10s to 10ms */
++	ret=pmic_reg_write(p, BD71837_PWRONCONFIG0, 0x00);
++	printf("##BD71837_PWRONCONFIG0####Return value of Write %d \n",ret);
++	ret=pmic_reg_write(p, BD71837_PWRONCONFIG1, 0x08);
++	printf("##BD71837_PWRONCONFIG1 Return value of Write %d \n",ret);
++
++        /* Reading Interrupt */
++	pmic_reg_read(p,BD71837_IRQ,&Value);
++        printf("## BD71837_IRQ REG Value =%d \n",Value);
++
++        /* Clear ALL Interrupt*/
++        pmic_reg_write(p, BD71837_IRQ, 0x7F);
++        while(1)
++        {
++                pmic_reg_read(p,BD71837_IRQ,&Value);
++
++                if((Value & (1<<4) )|| (Value & (1<<5)))
++                {
++                        printf("Long Press Short Press detected on PMIC\n");
++                        break;
++                }
++                udelay(300);
++        }
+ 
+ 	/* increase VDD_SOC to typical value 0.85v before first DRAM access */
+ 	pmic_reg_write(p, BD71837_BUCK1_VOLT_RUN, 0x0f);
+@@ -217,13 +243,11 @@ int power_init_board(void)
+ 	/* increase NVCC_DRAM_1V2 to 1.2v for DDR4 */
+ 	if (var_get_board_id() == VAR_SOM_MX8M_MINI)
+ 		pmic_reg_write(p, BD71837_BUCK8_VOLT, 0x28);
+-
+ 	/* enable LDO5 - required to access I2C bus 3 */
+ 	pmic_reg_write(p, BD71837_LDO5_VOLT, 0xc0);
+ 
+ 	/* lock the PMIC regs */
+ 	pmic_reg_write(p, BD71837_REGLOCK, 0x11);
+-
+ 	return 0;
+ }
+ #endif

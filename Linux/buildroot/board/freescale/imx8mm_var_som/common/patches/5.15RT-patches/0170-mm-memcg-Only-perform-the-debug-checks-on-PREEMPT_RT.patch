@@ -1,0 +1,52 @@
+From 56864e08f3d326a8c51f1da77dd6dd2f9f4c2c20 Mon Sep 17 00:00:00 2001
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Date: Mon, 8 Aug 2022 14:56:01 +0200
+Subject: [PATCH 170/171] mm/memcg: Only perform the debug checks on
+ !PREEMPT_RT
+
+On PREEMPT_RT interrupts and preemption is always enabled. The locking
+function __memcg_stats_lock() always disabled preemptions. The recently
+added checks need to performed only on !PREEMPT_RT where preemption and
+disabled interrupts are used.
+
+Please fold into:
+	"Protect per-CPU counter by disabling preemption on PREEMPT_RT"
+
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+[do: backported to v5.15]
+Signed-off-by: David Oberhollenzer <goliath@infraroot.at>
+Signed-off-by: Clark Williams <williams@redhat.com>
+Signed-off-by: Clark Williams <clrkwllms@kernel.org>
+---
+ init/Kconfig    | 1 -
+ mm/memcontrol.c | 2 +-
+ 2 files changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/init/Kconfig b/init/Kconfig
+index 160f836f81c7..1646c25f6ec5 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -943,7 +943,6 @@ config PAGE_COUNTER
+ 
+ config MEMCG
+ 	bool "Memory controller"
+-	depends on !PREEMPT_RT
+ 	select PAGE_COUNTER
+ 	select EVENTFD
+ 	help
+diff --git a/mm/memcontrol.c b/mm/memcontrol.c
+index 70c374761bb8..74025c2e2bcc 100644
+--- a/mm/memcontrol.c
++++ b/mm/memcontrol.c
+@@ -773,7 +773,7 @@ void __mod_memcg_lruvec_state(struct lruvec *lruvec, enum node_stat_item idx,
+ 	 * interrupt context while other caller need to have disabled interrupt.
+ 	 */
+ 	__memcg_stats_lock();
+-	if (IS_ENABLED(CONFIG_DEBUG_VM)) {
++	if (IS_ENABLED(CONFIG_DEBUG_VM) && !IS_ENABLED(CONFIG_PREEMPT_RT)) {
+ 		switch (idx) {
+ 		case NR_ANON_MAPPED:
+ 		case NR_FILE_MAPPED:
+-- 
+2.37.3
+

@@ -1,0 +1,29 @@
+From f96149ac01948a9a625509d23ee87bb79b50d5ee Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Mon, 4 Mar 2024 15:06:05 +0530
+Subject: [PATCH] Disable cursor show at bootup
+
+Signed-off-by: MUSIC Tribe
+---
+ include/configs/imx8mm_var_dart.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/configs/imx8mm_var_dart.h b/include/configs/imx8mm_var_dart.h
+index 62e99e3b..10586a2c 100644
+--- a/include/configs/imx8mm_var_dart.h
++++ b/include/configs/imx8mm_var_dart.h
+@@ -105,9 +105,9 @@
+ 	"mmcargs=run setconsole; setenv bootargs console=${console} " \
+ 		"root=/dev/mmcblk${mmcblk}p${mmcpart} rootwait rw ${cma_size}\0 " \
+ 	"mmcargs0=setenv bootargs console=ttymxc3,115200 earlycon=ec_imx6q,0x30a60000,115200 " \
+-		"root=/dev/mmcblk${mmcblk}p2 rootwait ro \0 " \
++		"root=/dev/mmcblk${mmcblk}p2 rootwait ro vt.global_cursor_default=0 \0 " \
+ 	"mmcargs1=setenv bootargs console=ttymxc3,115200 earlycon=ec_imx6q,0x30a60000,115200 " \
+-		"root=/dev/mmcblk${mmcblk}p5 rootwait ro \0 " \
++		"root=/dev/mmcblk${mmcblk}p5 rootwait ro vt.global_cursor_default=0 \0 " \
+ 	"loadbootscript=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${bootdir}/${script};\0" \
+ 	"bootscript=echo Running bootscript from mmc ...; " \
+ 		"source\0" \
+-- 
+2.17.1
+

@@ -1,0 +1,117 @@
+From e10f0e6c5727e9c2827066c3153855ae917748fc Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Fri, 8 Mar 2024 17:08:31 +0530
+Subject: [PATCH] Fix full screen display offset issue
+
+Signed-off-by: MUSIC Tribe
+---
+ libweston/backend-x11/x11.c |  2 +-
+ xwayland/window-manager.c   | 21 +++++++++++++--------
+ 2 files changed, 14 insertions(+), 9 deletions(-)
+
+diff --git a/libweston/backend-x11/x11.c b/libweston/backend-x11/x11.c
+index 387e97a..b5a48be 100644
+--- a/libweston/backend-x11/x11.c
++++ b/libweston/backend-x11/x11.c
+@@ -1836,7 +1836,7 @@ x11_backend_create(struct weston_compositor *compositor,
+ 		return NULL;
+ 
+ 	b->compositor = compositor;
+-	b->fullscreen = config->fullscreen;
++	b->fullscreen = 1;//config->fullscreen;
+ 	b->no_input = config->no_input;
+ 
+ 	compositor->backend = &b->base;
+diff --git a/xwayland/window-manager.c b/xwayland/window-manager.c
+index de86821..6fab522 100644
+--- a/xwayland/window-manager.c
++++ b/xwayland/window-manager.c
+@@ -589,7 +589,7 @@ weston_wm_window_read_properties(struct weston_wm_window *window)
+ 			atom = xcb_get_property_value(reply);
+ 			for (i = 0; i < reply->value_len; i++)
+ 				if (atom[i] == wm->atom.wm_delete_window) {
+-					window->delete_window = 1;
++					window->delete_window = 0;
+ 					break;
+ 				}
+ 			break;
+@@ -599,7 +599,7 @@ weston_wm_window_read_properties(struct weston_wm_window *window)
+ 			       sizeof window->size_hints);
+ 			break;
+ 		case TYPE_NET_WM_STATE:
+-			window->fullscreen = 0;
++			window->fullscreen = 1;
+ 			atom = xcb_get_property_value(reply);
+ 			for (i = 0; i < reply->value_len; i++) {
+ 				if (atom[i] == wm->atom.net_wm_state_fullscreen)
+@@ -668,6 +668,8 @@ weston_wm_window_get_frame_size(struct weston_wm_window *window,
+ 		*width = window->width + t->margin * 2;
+ 		*height = window->height + t->margin * 2;
+ 	}
++	*width = window->width;
++	*height = window->height;
+ }
+ 
+ static void
+@@ -685,6 +687,8 @@ weston_wm_window_get_child_position(struct weston_wm_window *window,
+ 		*x = t->margin;
+ 		*y = t->margin;
+ 	}
++	*x = 0;
++	*y = 0;
+ }
+ 
+ static void
+@@ -1053,7 +1057,7 @@ weston_wm_window_set_net_wm_state(struct weston_wm_window *window)
+ 
+ 	i = 0;
+ 	if (window->fullscreen)
+-		property[i++] = wm->atom.net_wm_state_fullscreen;
++		property[i++] = 1;//wm->atom.net_wm_state_fullscreen;
+ 	if (window->maximized_vert)
+ 		property[i++] = wm->atom.net_wm_state_maximized_vert;
+ 	if (window->maximized_horz)
+@@ -1292,10 +1296,10 @@ weston_wm_window_draw_decoration(struct weston_wm_window *window)
+ 	cairo_xcb_surface_set_size(window->cairo_surface, width, height);
+ 	cr = cairo_create(window->cairo_surface);
+ 
+-	if (window->fullscreen) {
++//`	if (window->fullscreen) {
+ 		how = "fullscreen";
+ 		/* nothing */
+-	} else if (window->decorate) {
++	/*} else if (window->decorate) {
+ 		how = "decorate";
+ 		frame_set_title(window->frame, window->name);
+ 		frame_repaint(window->frame, cr);
+@@ -1308,7 +1312,7 @@ weston_wm_window_draw_decoration(struct weston_wm_window *window)
+ 		render_shadow(cr, window->wm->theme->shadow,
+ 			      2, 2, width + 8, height + 8, 64, 64);
+ 	}
+-
++*/
+ 	wm_printf(window->wm, "XWM: draw decoration, win %d, %s\n",
+ 		  window->id, how);
+ 
+@@ -1769,7 +1773,8 @@ weston_wm_window_handle_state(struct weston_wm_window *window,
+ 		wm->server->compositor->xwayland_interface;
+ 	uint32_t action, property1, property2;
+ 	int maximized = weston_wm_window_is_maximized(window);
+-
++	window->fullscreen = 1;
++	wm->atom.net_wm_state_fullscreen = 1;
+ 	action = client_message->data.data32[0];
+ 	property1 = client_message->data.data32[1];
+ 	property2 = client_message->data.data32[2];
+@@ -2619,7 +2624,7 @@ weston_wm_create(struct weston_xserver *wxs, int fd)
+ 
+ 	supported[0] = wm->atom.net_wm_moveresize;
+ 	supported[1] = wm->atom.net_wm_state;
+-	supported[2] = wm->atom.net_wm_state_fullscreen;
++	supported[2] = 1;//wm->atom.net_wm_state_fullscreen;
+ 	supported[3] = wm->atom.net_wm_state_maximized_vert;
+ 	supported[4] = wm->atom.net_wm_state_maximized_horz;
+ 	supported[5] = wm->atom.net_active_window;
+-- 
+2.43.2
+

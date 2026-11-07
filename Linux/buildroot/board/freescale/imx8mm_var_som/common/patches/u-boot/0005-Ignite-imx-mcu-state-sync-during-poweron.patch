@@ -1,0 +1,159 @@
+From 9c0a48581f99a561cb674dc76c31e7ad794cca1d Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Thu, 29 Feb 2024 15:36:09 +0530
+Subject: [PATCH 2/2] Ignite: imx-mcu state sync during poweron
+
+Signed-off-by: MUSIC Tribe
+---
+ .../imx8mm_var_dart/imx8mm_var_dart.c         | 80 ++++++++++++++++++-
+ board/variscite/imx8mm_var_dart/spl.c         |  6 +-
+ 2 files changed, 82 insertions(+), 4 deletions(-)
+
+diff --git a/board/variscite/imx8mm_var_dart/imx8mm_var_dart.c b/board/variscite/imx8mm_var_dart/imx8mm_var_dart.c
+index 9665e9bc..3c90f072 100644
+--- a/board/variscite/imx8mm_var_dart/imx8mm_var_dart.c
++++ b/board/variscite/imx8mm_var_dart/imx8mm_var_dart.c
+@@ -19,6 +19,7 @@
+ 
+ #include "../common/imx8_eeprom.h"
+ #include "imx8mm_var_dart.h"
++#include <power/bd71837.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -28,9 +29,11 @@ extern int var_setup_mac(struct var_eeprom *eeprom);
+ 
+ #define TFT_GPIO         IMX_GPIO_NR(4, 11)
+ 
+-#if CONFIG_BOARD_IGNITE
++#ifdef CONFIG_BOARD_IGNITE
+ #define CV_GPIO		IMX_GPIO_NR(4, 15)
+ #define USB_HUB_PWR_ON	IMX_GPIO_NR(1, 8)
++#define BOOT_INDICATION_TO_MCU_P1	IMX_GPIO_NR(5, 22)
++#define BOOT_INDICATION_TO_MCU_P2	IMX_GPIO_NR(5, 23)
+ #else
+ #define CV_GPIO		IMX_GPIO_NR(1, 00)
+ #define SDCARD_RESET	IMX_GPIO_NR(2, 19)
+@@ -198,6 +201,74 @@ static int var_detect_dart_carrier_rev(void)
+ 	return dart_carrier_rev;
+ }
+ 
++#ifdef CONFIG_BOARD_IGNITE
++void mcu_power_on()
++{
++	int boot_ind_pin1_value = 0;
++	int boot_ind_pin2_value = 0;
++
++	gpio_request(BOOT_INDICATION_TO_MCU_P1, "mcu_ind_1");
++	gpio_request(BOOT_INDICATION_TO_MCU_P2, "mcu_ind_2");
++	gpio_direction_input(BOOT_INDICATION_TO_MCU_P1);
++	gpio_direction_input(BOOT_INDICATION_TO_MCU_P2);
++
++	boot_ind_pin1_value = gpio_get_value(BOOT_INDICATION_TO_MCU_P1);
++	boot_ind_pin2_value = gpio_get_value(BOOT_INDICATION_TO_MCU_P2);
++
++	/* Send indication to MCU to start booting */
++	gpio_direction_output(BOOT_INDICATION_TO_MCU_P1, boot_ind_pin1_value);
++	gpio_direction_output(BOOT_INDICATION_TO_MCU_P2, boot_ind_pin2_value);
++	udelay(100);
++
++	gpio_direction_output(BOOT_INDICATION_TO_MCU_P1, !boot_ind_pin1_value);
++	gpio_direction_output(BOOT_INDICATION_TO_MCU_P2, !boot_ind_pin2_value);
++	udelay(100);
++
++	gpio_direction_output(BOOT_INDICATION_TO_MCU_P1, boot_ind_pin1_value);
++	gpio_direction_output(BOOT_INDICATION_TO_MCU_P2, boot_ind_pin2_value);
++}
++
++void handle_power_key()
++{
++	int ret;
++	struct udevice *bus;
++	struct udevice *dev;
++	int value = 0;
++
++	if(!strcmp("no", env_get("force_reboot")))
++	{
++		ret = uclass_get_device_by_seq(UCLASS_I2C, 0, &bus);
++		if (ret) {
++			debug("%s: No bus %d\n", __func__, 0);
++			return ret;
++		}
++	        ret = dm_i2c_probe(bus, 0x4b, 0, &dev);
++		if (!ret) {
++			printf("pmic probe success\n");
++			dm_i2c_read(dev, BD71837_IRQ,&value);
++			printf("## BD71837_IRQ REG Value =%d \n",value);
++
++			while(1)
++			{
++				dm_i2c_read(dev, BD71837_IRQ,&value);
++				printf(" ");
++				if((value & (1<<4) )|| (value & (1<<5)))
++				{
++					printf("Long Press Short Press detected on PMIC\n");
++					break;
++				}
++				udelay(300);
++			}
++		}
++	}
++	else
++	{
++		env_set("force_reboot", "no");
++		env_save();
++	}
++}
++#endif
++
+ #define SDRAM_SIZE_STR_LEN 5
+ int board_late_init(void)
+ {
+@@ -208,6 +279,11 @@ int board_late_init(void)
+ 	struct var_carrier_eeprom carrier_eeprom;
+ 	char carrier_rev[16] = {0};
+ 
++#ifdef CONFIG_BOARD_IGNITE
++	handle_power_key();
++	mcu_power_on();
++#endif
++
+ #ifdef CONFIG_FEC_MXC
+ 	var_setup_mac(ep);
+ #endif
+@@ -259,7 +335,7 @@ int board_late_init(void)
+         gpio_direction_output(TFT_GPIO, 0);
+         gpio_direction_output(CV_GPIO, 1);
+ 
+-#if CONFIG_BOARD_IGNITE
++#ifdef CONFIG_BOARD_IGNITE
+ 	gpio_request(USB_HUB_PWR_ON, "usb_host_enable");
+ 	gpio_direction_output(USB_HUB_PWR_ON, 1);
+ #else
+diff --git a/board/variscite/imx8mm_var_dart/spl.c b/board/variscite/imx8mm_var_dart/spl.c
+index 8d12047e..f8e9753b 100644
+--- a/board/variscite/imx8mm_var_dart/spl.c
++++ b/board/variscite/imx8mm_var_dart/spl.c
+@@ -222,7 +222,9 @@ int power_init_board(void)
+ 
+         /* Clear ALL Interrupt*/
+         pmic_reg_write(p, BD71837_IRQ, 0x7F);
+-        while(1)
++
++#ifdef CONFIG_BOARD_KICK
++	while(1)
+         {
+                 pmic_reg_read(p,BD71837_IRQ,&Value);
+ 
+@@ -233,7 +235,7 @@ int power_init_board(void)
+                 }
+                 udelay(300);
+         }
+-
++#endif
+ 	/* increase VDD_SOC to typical value 0.85v before first DRAM access */
+ 	pmic_reg_write(p, BD71837_BUCK1_VOLT_RUN, 0x0f);
+ 
+-- 
+2.17.1
+

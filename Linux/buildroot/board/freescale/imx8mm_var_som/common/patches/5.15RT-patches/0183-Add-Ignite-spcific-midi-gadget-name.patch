@@ -1,0 +1,47 @@
+From 8f3a71c46605be98ace0dd806b08676e909e6da9 Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Fri, 22 Mar 2024 10:35:54 +0530
+Subject: [PATCH] Add Ignite spcific midi gadget name
+
+Signed-off-by: MUSIC Tribe
+---
+ drivers/usb/gadget/Kconfig           | 6 ++++++
+ drivers/usb/gadget/function/f_midi.c | 4 ++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/drivers/usb/gadget/Kconfig b/drivers/usb/gadget/Kconfig
+index dd58094f0..98c686ca7 100644
+--- a/drivers/usb/gadget/Kconfig
++++ b/drivers/usb/gadget/Kconfig
+@@ -135,6 +135,12 @@ config U_SERIAL_CONSOLE
+ 	help
+ 	   It supports the serial gadget can be used as a console.
+ 
++config USB_IGNITE
++	bool "Ignite USB config support"
++	depends on USB_MIDI_GADGET
++	help
++	    Ignite specific USB configurations
++
+ source "drivers/usb/gadget/udc/Kconfig"
+ 
+ #
+diff --git a/drivers/usb/gadget/function/f_midi.c b/drivers/usb/gadget/function/f_midi.c
+index 71a1a26e8..d7c60b990 100644
+--- a/drivers/usb/gadget/function/f_midi.c
++++ b/drivers/usb/gadget/function/f_midi.c
+@@ -210,7 +210,11 @@ static struct usb_ms_endpoint_descriptor_16 ms_in_desc = {
+ #define STRING_FUNC_IDX			0
+ 
+ static struct usb_string midi_string_defs[] = {
++#if CONFIG_USB_IGNITE
++	[STRING_FUNC_IDX].s = "IGNITE MIDI",
++#else
+ 	[STRING_FUNC_IDX].s = "MIDI function",
++#endif
+ 	{  } /* end of list */
+ };
+ 
+-- 
+2.43.2
+

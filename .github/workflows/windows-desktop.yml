@@ -1,0 +1,22 @@
+name: Windows desktop build
+on:
+  workflow_dispatch:
+  push:
+    paths: ['Source/Application/**', 'build-windows.ps1', '.github/workflows/windows-desktop.yml']
+  pull_request:
+    paths: ['Source/Application/**', 'build-windows.ps1', '.github/workflows/windows-desktop.yml']
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and package
+        shell: pwsh
+        run: ./build-windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ignite-Windows-x64
+          path: dist/Ignite-Windows-x64.zip
+          if-no-files-found: error

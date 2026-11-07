@@ -1,0 +1,34 @@
+diff --git a/src/SerialPort.cpp b/src/SerialPort.cpp
+index e354fcbff..6885c0f31 100644
+--- a/src/SerialPort.cpp
++++ b/src/SerialPort.cpp
+@@ -492,10 +492,10 @@ namespace LibSerial
+     SerialPort::~SerialPort() noexcept
+     {
+         // Close the serial port if it is open.
+-        if (mImpl->IsOpen())
+-        {
+-            mImpl->Close() ;
+-        }
++    //    if (mImpl->IsOpen())
++      //  {
++        //    mImpl->Close() ;
++        //}
+     }
+ 
+     void
+@@ -809,10 +809,10 @@ namespace LibSerial
+     SerialPort::Implementation::~Implementation()
+     {
+         // Close the serial port if it is open.
+-        if (this->IsOpen())
+-        {
+-            this->Close() ;
+-        }
++        //if (this->IsOpen())
++        //{
++          //  this->Close() ;
++        //}
+     }
+ 
+     inline

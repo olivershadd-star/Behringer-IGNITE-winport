@@ -1,0 +1,193 @@
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-var-som-symphony.dts b/arch/arm64/boot/dts/freescale/imx8mm-var-som-symphony.dts
+index 5c75d986eea7..c5eaa32ab313 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mm-var-som-symphony.dts
++++ b/arch/arm64/boot/dts/freescale/imx8mm-var-som-symphony.dts
+@@ -272,8 +272,8 @@ &panel_lvds {
+ 
+ 	panel-timing {
+ 		clock-frequency = <33000000>;
+-		hactive = <800>;
+-		vactive = <480>;
++		hactive = <1024>;
++		vactive = <600>;
+ 		hback-porch = <40>;
+ 		hfront-porch = <40>;
+ 		vback-porch = <29>;
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-var-som.dtsi b/arch/arm64/boot/dts/freescale/imx8mm-var-som.dtsi
+index d34faae280e5..d8639bf04047 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mm-var-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx8mm-var-som.dtsi
+@@ -178,6 +178,25 @@ dsi_lvds_bridge: sn65dsi84@2c {
+ 		pinctrl-0 = <&pinctrl_lvds>;
+ 		status = "okay";
+ 
++		display-timings {
++                        lvds {
++                                clock-frequency = <33000000>;
++                                hactive = <1024>;        /*  tried 1366 & 1000 as well.. 1024 works..*/
++                                vactive = <600>;          /* tried 800 & 768 as well .. 600 works.. */
++                                hback-porch = <40>;
++                                hfront-porch = <40>;
++                                vback-porch = <29>;
++                                vfront-porch = <13>;
++                                hsync-len = <48>;
++                                vsync-len = <3>;
++                                hsync-active = <0>;
++                                vsync-active = <0>;
++                                de-active = <1>;
++                                pixelclk-active = <0>;
++                        };
++                };
++
++
+ 		ports {
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+@@ -324,38 +343,29 @@ &i2c3 {
+ 	sda-gpios = <&gpio5 19 GPIO_ACTIVE_HIGH>;
+ 	status = "okay";
+ 
+-	wm8904: audio-codec@1a {
+-		compatible = "wlf,wm8904";
+-		#sound-dai-cells = <0>;
+-		reg = <0x1a>;
+-		clocks = <&clk IMX8MM_CLK_SAI5_ROOT>;
+-		clock-names = "mclk";
+-		DBVDD-supply = <&reg_audio>;
+-		DCVDD-supply = <&ldo5_reg>;
+-		AVDD-supply = <&ldo5_reg>;
+-		CPVDD-supply = <&ldo5_reg>;
+-		MICVDD-supply = <&ldo5_reg>;
+-		num-drc-cfgs = <5>;
+-		drc-cfg-names = "default", "peaklimiter", "tradition", "soft", "music";
+-		drc-cfg-regs =
+-			/* coded default: KNEE_IP = KNEE_OP = 0, HI_COMP = LO_COMP = 1  */
+-			<0x01af 0x3248 0x0000 0x0000>,
+-			/* coded default: KNEE_IP = -24, KNEE_OP = -6, HI_COMP = 1/4, LO_COMP = 1 */
+-			<0x04af 0x324b 0x0010 0x0408>,
+-			/* coded default: KNEE_IP = -42, KNEE_OP = -3, HI_COMP = 0, LO_COMP = 1 */
+-			<0x04af 0x324b 0x0028 0x0704>,
+-			/* coded default: KNEE_IP = -45, KNEE_OP = -9, HI_COMP = 1/8, LO_COMP = 1 */
+-			<0x04af 0x324b 0x0018 0x078c>,
+-			/* coded default: KNEE_IP = -30, KNEE_OP = -10.5, HI_COMP = 1/4, LO_COMP = 1 */
+-			<0x04af 0x324b 0x0010 0x050e>;
+-		gpio-cfg = <
+-			0x0018 /* GPIO1 => DMIC_CLK */
+-			0xffff /* GPIO2 => don't touch */
+-			0xffff /* GPIO3 => don't touch */
+-			0xffff /* GPIO4 => don't touch */
+-		>;
+-		status = "okay";
+-	};
++	gt911: touchscreen@14 {                                                                 /*changing from 0x14 to 0x5D*/
++                        compatible = "goodix,gt911";
++                        reg = <0x14>;
++                        pinctrl-names = "default";
++                        pinctrl-0 = <&pinctrl_gt911_ts_gpio>;                   /* Custom pinctrl group node */
++
++                        interrupt-parent = <&gpio5>;                                    /* Use the correct gpio controller here */
++                        interrupts = <25 IRQ_TYPE_EDGE_FALLING>;                         /* IRQ_TYPE_NONE not working, try with IRQ_TYPE_EDGE_FALLING and IRQ_TYPE_EDGE_RISING */
++                        irq-gpios = <&gpio5 25 GPIO_ACTIVE_HIGH>;
++                        reset-gpios = <&gpio4 4 GPIO_ACTIVE_LOW>;  /*Use the correct gpio controller and pin */
++                        touchscreen-size-x = <1024>;
++                        touchscreen-size-y = <600>;
++/*                      power-off-suspend;
++                        no-probe-reset;
++*/
++                        status = "okay";
++    };
++	/* PCF8523 RTC module */
++        rtc@68 {
++                compatible = "nxp,pcf8523";
++                reg = <0x68>;
++                status = "okay";
++        };
+ };
+ 
+ &sai5 {
+@@ -446,63 +456,6 @@ &wdog1 {
+ 	status = "okay";
+ };
+ 
+-&ecspi1 {
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&pinctrl_ecspi1>;
+-	cs-gpios = <&gpio1 14 GPIO_ACTIVE_LOW>,
+-		   <&gpio1  0 GPIO_ACTIVE_LOW>,
+-		   <&gpio2 19 GPIO_ACTIVE_LOW>;
+-	status = "okay";
+-
+-	/* Resistive touch controller */
+-	ads7846@0 {
+-		reg = <0>;
+-		compatible = "ti,ads7846";
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&pinctrl_restouch>;
+-		interrupt-parent = <&gpio1>;
+-		interrupts = <3 IRQ_TYPE_EDGE_FALLING>;
+-		spi-max-frequency = <1500000>;
+-		pendown-gpio = <&gpio1 3 GPIO_ACTIVE_LOW>;
+-		ti,x-min = /bits/ 16 <125>;
+-		ti,x-max = /bits/ 16 <4008>;
+-		ti,y-min = /bits/ 16 <282>;
+-		ti,y-max = /bits/ 16 <3864>;
+-		ti,x-plate-ohms = /bits/ 16 <180>;
+-		ti,pressure-max = /bits/ 16 <255>;
+-		ti,debounce-max = /bits/ 16 <10>;
+-		ti,debounce-tol = /bits/ 16 <3>;
+-		ti,debounce-rep = /bits/ 16 <1>;
+-		ti,settle-delay-usec = /bits/ 16 <150>;
+-		ti,keep-vref-on;
+-		wakeup-source;
+-		status = "okay";
+-	};
+-
+-	/* CAN controller */
+-	can0: can@1 {
+-		reg = <1>;
+-		compatible = "microchip,mcp251xfd";
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&pinctrl_can>;
+-		clocks = <&can0_osc>;
+-		interrupt-parent = <&gpio1>;
+-		interrupts = <5 IRQ_TYPE_LEVEL_LOW>;
+-		/* On SOM revions 1.2 and below RX-INT GPIO is not available */
+-		microchip,rx-int-gpios = <&gpio2 12 GPIO_ACTIVE_LOW>;
+-		/* On SOM revions 1.2 and below the spi-max-frequency should be 10000000 */
+-		spi-max-frequency = <20000000>;
+-		status = "okay";
+-	};
+-
+-	/* Test SPI device */
+-	spidev@2 {
+-		reg = <2>;
+-		compatible = "var,spidev";
+-		spi-max-frequency = <12000000>;
+-		status = "okay";
+-	};
+-};
+ 
+ &mu {
+ 	status = "okay";
+@@ -553,6 +506,21 @@ MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9		0x19
+ 		>;
+ 	};
+ 
++	pinctrl_gt911_ts_gpio: gt911_ts_gpiogrp {
++        fsl,pins = <
++
++                        MX8MM_IOMUXC_UART2_TXD_GPIO5_IO25        0x1d6  /* Interrupt -->> new one : GPIO5_IO25 */
++                        MX8MM_IOMUXC_SAI1_RXD2_GPIO4_IO4        0x149 /* Reset -->> new one : MX8MM_IOMUXC_UART3_RXD_GPIO5_IO26 : , */
++#if 0
++
++/* After changing the pad control value as 0x1d6 for interrupt pin and 0x149 for reset pin it worked at once like a charm. */
++                        MX8MM_IOMUXC_SAI5_RXFS_GPIO3_IO19         0x1d6 /* 0x16 not working on bootup: Interrupt try with 0x1c0*/
++                        MX8MM_IOMUXC_SAI5_RXD0_GPIO3_IO21        0x149 /* 0x1c3 default: not working on bootup: Reset */
++#endif
++        >;
++    };
++
++
+ 	pinctrl_fec1_sleep: fec1grpsleep {
+ 		fsl,pins = <
+ 			MX8MM_IOMUXC_ENET_MDC_GPIO1_IO16		0x120

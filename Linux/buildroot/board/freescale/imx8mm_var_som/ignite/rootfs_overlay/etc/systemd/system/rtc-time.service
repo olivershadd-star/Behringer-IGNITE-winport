@@ -1,0 +1,12 @@
+[Unit]
+Description=Set RTC time on first boot
+ConditionPathExists=!/data/ignite/.rtc_set
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /usr/bin/update_rtc_time.sh
+ExecStartPost=/bin/touch /data/ignite/.rtc_set
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

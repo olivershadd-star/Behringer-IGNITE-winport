@@ -1,0 +1,44 @@
+From 8888241e3d5eb1bae053f879c5046957de3fe5d0 Mon Sep 17 00:00:00 2001
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Date: Fri, 11 Feb 2022 19:14:56 +0100
+Subject: [PATCH 156/171] i2c: cht-wc: Use generic_handle_irq_safe().
+
+Instead of manually disabling interrupts before invoking use
+generic_handle_irq_safe() which can be invoked with enabled and disabled
+interrupts.
+
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Reviewed-by: Hans de Goede <hdegoede@redhat.com>
+Acked-by: Wolfram Sang <wsa@kernel.org>
+Link: https://lore.kernel.org/r/20220211181500.1856198-4-bigeasy@linutronix.de
+(cherry picked from commit 8ea8588239d645dd673108f87db99a2773578a15)
+Signed-off-by: Clark Williams <williams@redhat.com>
+---
+ drivers/i2c/busses/i2c-cht-wc.c | 11 ++---------
+ 1 file changed, 2 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/i2c/busses/i2c-cht-wc.c b/drivers/i2c/busses/i2c-cht-wc.c
+index 1cf68f85b2e1..8ccf0c928bb4 100644
+--- a/drivers/i2c/busses/i2c-cht-wc.c
++++ b/drivers/i2c/busses/i2c-cht-wc.c
+@@ -99,15 +99,8 @@ static irqreturn_t cht_wc_i2c_adap_thread_handler(int id, void *data)
+ 	 * interrupt handler as well, so running the client irq handler from
+ 	 * this thread will cause things to lock up.
+ 	 */
+-	if (reg & CHT_WC_EXTCHGRIRQ_CLIENT_IRQ) {
+-		/*
+-		 * generic_handle_irq expects local IRQs to be disabled
+-		 * as normally it is called from interrupt context.
+-		 */
+-		local_irq_disable();
+-		generic_handle_irq(adap->client_irq);
+-		local_irq_enable();
+-	}
++	if (reg & CHT_WC_EXTCHGRIRQ_CLIENT_IRQ)
++		generic_handle_irq_safe(adap->client_irq);
+ 
+ 	return IRQ_HANDLED;
+ }
+-- 
+2.37.3
+

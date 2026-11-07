@@ -1,0 +1,82 @@
+# https://aka.ms/yaml
+
+resources:
+  repositories:
+    - repository: Linux
+      type: git
+      name: BE_P0XXX_JUCE_PLATFORM/Linux
+      ref: Ignite_RevB_MT_SoM
+
+trigger:
+  - Ignite_RevB_MT_SoM
+
+schedules:
+- cron: "0 12 * * 4"
+  displayName: Weekly
+  always: true
+  branches:
+    include:
+    - Ignite_RevB_MT_SoM
+
+jobs:
+- job: build
+  timeoutInMinutes: 0
+  strategy:
+    matrix:
+      linux:
+        imageName: 'Ubuntu20.04'
+        isLinux: True
+
+  pool:
+    name: Ubuntu20.04
+
+  steps:
+    - task: Bash@3
+      condition: variables.isLinux
+      displayName : "Clean work space"
+      inputs:
+        targetType: 'inline'
+        script: |
+          sudo rm -rf  $(Build.SourcesDirectory)
+
+    - checkout: Linux
+      clean: true
+
+    # --- Build Ignite - Linux ---
+    - task: Bash@3
+      condition: variables.isLinux
+      displayName: "Build Ignite for Linux"
+      inputs:
+        targetType: 'inline'
+        script: |
+          cd $(Build.SourcesDirectory)/
+          bash ./CI/azure_build_standalone.sh Ignite
+    - task: CopyFiles@2
+      condition: variables.isLinux
+      displayName : "Copy firmware files"
+      inputs:
+        SourceFolder : '$(Build.SourcesDirectory)/buildroot/output/images/fw_files/'
+        Contents : '**'
+        TargetFolder : '$(Build.ArtifactStagingDirectory)/uuu_binary'
+    - task: CopyFiles@2
+      condition: variables.isLinux
+      displayName : "Copy fw upgrade files"
+      inputs:
+        SourceFolder : '$(Build.SourcesDirectory)/buildroot/output/images/fwUpgrade_files'
+        Contents : '**'
+        TargetFolder : '$(Build.ArtifactStagingDirectory)/fwUpgrade_binary/'
+    - task: CopyFiles@2
+      condition: variables.isLinux
+      displayName : "Copy App image"
+      inputs:
+        SourceFolder : '$(Build.SourcesDirectory)/buildroot/output/images'
+        Contents : 'appfs.tar.gz'
+        TargetFolder : '$(Build.ArtifactStagingDirectory)/apps_binary/'
+
+    - task: PublishBuildArtifacts@1
+      condition: variables.isLinux
+      displayName: "upload Ignite binaries"
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/'
+        ArtifactName: 'IgniteArtifacts'
+        publishLocation: 'Container'

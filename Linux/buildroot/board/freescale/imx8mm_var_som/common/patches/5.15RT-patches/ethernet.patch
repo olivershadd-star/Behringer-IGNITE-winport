@@ -1,0 +1,13 @@
+diff --git a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth-ceetm.h b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth-ceetm.h
+index 0f914ef44d01..b68f01eefd44 100644
+--- a/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth-ceetm.h
++++ b/drivers/net/ethernet/freescale/dpaa2/dpaa2-eth-ceetm.h
+@@ -168,7 +168,7 @@ struct dpaa2_ceetm_qdisc_stats {
+ 
+ struct dpaa2_ceetm_class_stats {
+ 	/* Software counters */
+-	struct gnet_stats_basic_packed bstats;
++	//struct gnet_stats_basic_packed bstats;
+ 	__u32 ern_drop_count;
+ };
+ 

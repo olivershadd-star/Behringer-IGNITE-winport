@@ -1,0 +1,47 @@
+From c459b82654cb25e8d28588bc098691f6ac9364a2 Mon Sep 17 00:00:00 2001
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Date: Fri, 11 Feb 2022 19:14:55 +0100
+Subject: [PATCH 155/171] i2c: core: Use generic_handle_irq_safe() in
+ i2c_handle_smbus_host_notify().
+
+The i2c-i801 driver invokes i2c_handle_smbus_host_notify() from his
+interrupt service routine. On PREEMPT_RT i2c-i801's handler is forced
+threaded with enabled interrupts which leads to a warning by
+handle_irq_event_percpu() assuming that irq_default_primary_handler()
+enabled interrupts.
+
+i2c-i801's interrupt handler can't be made non-threaded because the
+interrupt line is shared with other devices.
+
+Use generic_handle_irq_safe() which can invoked with disabled and enabled
+interrupts.
+
+Reported-by: Michael Below <below@judiz.de>
+Link: https://bugs.debian.org/1002537
+Cc: Salvatore Bonaccorso <carnil@debian.org>
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Reviewed-by: Oleksandr Natalenko <oleksandr@natalenko.name>
+Acked-by: Wolfram Sang <wsa@kernel.org>
+Link: https://lore.kernel.org/r/20220211181500.1856198-3-bigeasy@linutronix.de
+(cherry picked from commit 7e44f2d97e9c2662134fa50b901a1312c5c1a544)
+Signed-off-by: Clark Williams <williams@redhat.com>
+---
+ drivers/i2c/i2c-core-base.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/i2c-core-base.c b/drivers/i2c/i2c-core-base.c
+index 8fb065caf30b..c232535ca8f4 100644
+--- a/drivers/i2c/i2c-core-base.c
++++ b/drivers/i2c/i2c-core-base.c
+@@ -1422,7 +1422,7 @@ int i2c_handle_smbus_host_notify(struct i2c_adapter *adap, unsigned short addr)
+ 	if (irq <= 0)
+ 		return -ENXIO;
+ 
+-	generic_handle_irq(irq);
++	generic_handle_irq_safe(irq);
+ 
+ 	return 0;
+ }
+-- 
+2.37.3
+

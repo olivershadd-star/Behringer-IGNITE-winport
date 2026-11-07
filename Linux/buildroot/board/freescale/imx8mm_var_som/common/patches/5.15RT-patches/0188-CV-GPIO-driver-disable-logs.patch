@@ -1,0 +1,52 @@
+From 9ffb1551e67032d62b9693b76e56bc3397fa34b1 Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Fri, 9 Aug 2024 11:05:07 +0530
+Subject: [PATCH] CV GPIO driver : disable logs
+
+Signed-off-by: MUSIC Tribe
+---
+ drivers/misc/cvctl.c | 7 ++-----
+ 1 file changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/misc/cvctl.c b/drivers/misc/cvctl.c
+index 64960145e..54a0e59ba 100644
+--- a/drivers/misc/cvctl.c
++++ b/drivers/misc/cvctl.c
+@@ -15,8 +15,8 @@ static int gpio_state = 0;
+ static void
+ cvctl_set_channel (int state, int channel_num)
+ {
+-  printk (KERN_INFO "set channem %d: state %d:\n", channel_num, state);
+-  /*state ? (gpio_state |= (1 << channel_num)) : (gpio_state &=
++  /*printk (KERN_INFO "set channem %d: state %d:\n", channel_num, state);
++  state ? (gpio_state |= (1 << channel_num)) : (gpio_state &=
+ 						~(1 << (channel_num)));
+   gpio_set_value (CV_MUX_S0_GPIO, CV_CHANNEL_1_5 | gpio_state);
+   gpio_set_value (CV_MUX_S1_GPIO, CV_CHANNEL_2_6 | gpio_state);
+@@ -50,7 +50,6 @@ cvctl_misc_ioctl (struct file *file, unsigned int cmd, unsigned long arg)
+   switch (cmd)
+     {
+     case CV_IOCTL_GET_CHANNELS:
+-      printk (KERN_INFO "Received ioctl command: %u\n", cmd);
+       ret = copy_to_user ((int *) arg, &gpio_state, sizeof (int));
+       if (ret)
+ 	{
+@@ -59,7 +58,6 @@ cvctl_misc_ioctl (struct file *file, unsigned int cmd, unsigned long arg)
+ 	}
+       break;
+     case CV_IOCTL_ENABLE_CHANNEL:
+-      printk (KERN_INFO "Received ioctl command: %u\n", cmd);
+       ret = copy_from_user (&channel, (int *) arg, sizeof (int));
+       if (ret)
+ 	{
+@@ -69,7 +67,6 @@ cvctl_misc_ioctl (struct file *file, unsigned int cmd, unsigned long arg)
+       cvctl_set_channel (true, channel);
+       break;
+     case CV_IOCTL_DISABLE_CHANNEL:
+-      printk (KERN_INFO "Received ioctl command: %u\n", cmd);
+       ret = copy_from_user (&channel, (int *) arg, sizeof (int));
+       if (ret)
+ 	{
+-- 
+2.17.1
+

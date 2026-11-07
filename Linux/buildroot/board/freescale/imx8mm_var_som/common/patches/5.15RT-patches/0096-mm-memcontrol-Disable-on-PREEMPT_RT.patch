@@ -1,0 +1,31 @@
+From ba09605816aa3bcf480d505098c02a82c7bef352 Mon Sep 17 00:00:00 2001
+From: Thomas Gleixner <tglx@linutronix.de>
+Date: Sun, 25 Jul 2021 21:35:46 +0200
+Subject: [PATCH 096/171] mm/memcontrol: Disable on PREEMPT_RT
+
+559271146efc ("mm/memcg: optimize user context object stock access") is a
+classic example of optimizing for the cpu local BKL serialization without a
+clear protection scope.
+
+Disable MEMCG on RT for now.
+
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+---
+ init/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/init/Kconfig b/init/Kconfig
+index 1646c25f6ec5..160f836f81c7 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -943,6 +943,7 @@ config PAGE_COUNTER
+ 
+ config MEMCG
+ 	bool "Memory controller"
++	depends on !PREEMPT_RT
+ 	select PAGE_COUNTER
+ 	select EVENTFD
+ 	help
+-- 
+2.37.3
+

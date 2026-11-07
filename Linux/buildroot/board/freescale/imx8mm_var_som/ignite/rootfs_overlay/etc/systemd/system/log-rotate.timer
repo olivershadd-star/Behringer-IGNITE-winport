@@ -1,0 +1,12 @@
+[Unit]
+Description="Run log-rotate.service 5min after boot and every 24 hours relative tt
+o activation time"
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=24h
+OnCalendar=Mon..Fri *-*-* 10:00:*
+Unit=log-rotate.service
+
+[Install]
+WantedBy=multi-user.target

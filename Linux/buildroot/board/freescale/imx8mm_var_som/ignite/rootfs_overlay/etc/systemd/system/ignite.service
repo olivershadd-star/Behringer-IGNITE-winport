@@ -1,0 +1,28 @@
+[Unit]
+Description=Ignite Auto Start
+
+Wants=network.target
+After=weston@root.service app-mount.service
+Requires=weston@root.service app-mount.service
+ConditionHost=IGNITE
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sleep 5
+ExecStart=/app/Ignite
+Restart=on-failure
+RestartSec=2
+KillMode=control-group
+CPUWeight=10000
+CPUQuota=infinity
+IOWeight=10000
+MemorySwapMax=0
+TasksMax=infinity
+LimitNOFILE=65536
+LimitNPROC=infinity
+StandardOutput=journal
+StandardError=journal
+WatchdogSec=10s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,72 @@
+# https://aka.ms/yaml
+
+resources:
+  repositories:
+    - repository: Source
+      type: git
+      name: Source
+      ref: ui_dev
+
+trigger:
+  - ui_dev
+
+schedules:
+- cron: "0 12 * * 4"
+  displayName: Weekly
+  always: true
+  branches:
+    include:
+    - ui_dev
+
+jobs:
+- job: build
+  timeoutInMinutes: 0
+  strategy:
+    matrix:
+      mac:
+        imageName: 'macOS-13'
+        isMac: True
+  pool:
+    vmImage: $(imageName)
+
+  steps:
+    - checkout: self
+      clean: true
+
+    # --- Build Ignite - MACOS ---
+    - task: Bash@3
+      condition: variables.isMac
+      displayName: "Build Ignite App for MAC OS"
+      inputs:
+        targetType: 'inline'
+        script: |
+          cd $(Build.SourcesDirectory)/
+          bash ./CI/azure_build.sh "isMac"
+    - task: CopyFiles@2
+      condition: variables.isMac
+      displayName : "Copy App image"
+      inputs:
+        SourceFolder : '$(Build.SourcesDirectory)/Application/apps/ignite/Ignite_artefacts/Ignite.app/Contents/MacOS/'
+        Contents : '**'
+        TargetFolder : '$(Build.ArtifactStagingDirectory)/MacOS_Images' 
+    - task: CopyFiles@2
+      condition: variables.isMac
+      displayName : "Copy App assets"
+      inputs:
+        SourceFolder : '$(Build.SourcesDirectory)/Application/assets'
+        Contents : '**'
+        TargetFolder : '$(Build.ArtifactStagingDirectory)/MacOS_Images/assets/' 
+    - task: PublishBuildArtifacts@1
+      condition: variables.isMac
+      displayName: "upload Ignite binaries"
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/'
+        ArtifactName: 'IgniteArtifacts'
+        publishLocation: 'Container'
+
+    - task: Bash@3
+      displayName : "Clean work space"
+      inputs:
+        targetType: 'inline'
+        script: |
+          sudo rm -rf  $(Build.SourcesDirectory)

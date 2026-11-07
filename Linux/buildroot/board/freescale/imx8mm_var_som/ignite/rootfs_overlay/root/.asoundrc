@@ -1,0 +1,30 @@
+pcm.!default {
+	type asym
+	playback.pcm "play"
+}
+
+pcm.play {
+	type plug
+	slave {
+		pcm convert
+	}
+}
+
+pcm.convert{
+	type plug
+	slave {
+		pcm card0
+		format S32_LE
+		rate 48000
+	}
+}
+
+pcm.card0 {
+	type hw
+	card 0
+}
+
+ctl.card0 {
+	type hw
+	card 0
+}

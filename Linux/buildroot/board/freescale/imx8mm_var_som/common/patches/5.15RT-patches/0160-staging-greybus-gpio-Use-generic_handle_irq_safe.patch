@@ -1,0 +1,39 @@
+From de5a6a75206db5d08e9981ebd7a3961896145e71 Mon Sep 17 00:00:00 2001
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Date: Fri, 11 Feb 2022 19:15:00 +0100
+Subject: [PATCH 160/171] staging: greybus: gpio: Use
+ generic_handle_irq_safe().
+
+Instead of manually disabling interrupts before invoking use
+generic_handle_irq_safe() which can be invoked with enabled and disabled
+interrupts.
+
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Acked-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Acked-by: Johan Hovold <johan@kernel.org>
+Link: https://lore.kernel.org/r/20220211181500.1856198-8-bigeasy@linutronix.de
+(cherry picked from commit 37801f96e1f0e7804d312136dafd6a5b7307099f)
+Signed-off-by: Clark Williams <williams@redhat.com>
+---
+ drivers/staging/greybus/gpio.c | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/drivers/staging/greybus/gpio.c b/drivers/staging/greybus/gpio.c
+index 7e6347fe93f9..8a7cf1d0e968 100644
+--- a/drivers/staging/greybus/gpio.c
++++ b/drivers/staging/greybus/gpio.c
+@@ -391,10 +391,7 @@ static int gb_gpio_request_handler(struct gb_operation *op)
+ 		return -EINVAL;
+ 	}
+ 
+-	local_irq_disable();
+-	ret = generic_handle_irq(irq);
+-	local_irq_enable();
+-
++	ret = generic_handle_irq_safe(irq);
+ 	if (ret)
+ 		dev_err(dev, "failed to invoke irq handler\n");
+ 
+-- 
+2.37.3
+

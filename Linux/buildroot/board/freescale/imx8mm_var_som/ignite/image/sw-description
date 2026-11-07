@@ -1,0 +1,42 @@
+software =
+{	version= "0.1"	
+	description= "FW Update"
+	Ignite = {
+		hardware-compatibility: [ "0.0.1" ];
+
+		files: (
+			{
+				filename = "rootfs.tar.gz";
+				device = "/dev/update";
+				type= "archive";
+				filesystem = "ext4";
+				path = "/";
+				compressed= true;
+			},
+			{
+				filename = "kernel.tar.gz";
+				device = "/dev/kernel";
+				type= "archive";
+				filesystem = "ext4";
+				path = "/";
+				compressed= true;
+			},
+			{
+				filename = "appfs.tar.gz";
+				device = "/dev/app";
+				type= "archive";
+				filesystem = "ext4";
+				path = "/";
+				compressed= true;
+			}
+		);
+		scripts: (
+			{
+				filename = "preinstall.sh";
+				type = "shellscript";
+			}
+		);
+	};
+
+	};
+

@@ -1,0 +1,6 @@
+/dev/root / auto ro 0 1
+tmpfs /var tmpfs mode=1777 0 0
+none /sys/fs/selinux selinuxfs noauto 0 0
+/dev/mmcblk2p7 /factory ext4 defaults,ro 0 2
+/dev/mmcblk2p8 /data/ignite ext4 defaults,data=journal 0 2
+/dev/mmcblk2p9 /home/ignite vfat defaults 0 2

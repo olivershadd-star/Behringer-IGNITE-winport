@@ -1,0 +1,37 @@
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-var-som-symphony.dts b/arch/arm64/boot/dts/freescale/imx8mm-var-som-symphony.dts
+index 5c75d986eea7..5e410e7c2462 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mm-var-som-symphony.dts
++++ b/arch/arm64/boot/dts/freescale/imx8mm-var-som-symphony.dts
+@@ -196,32 +196,6 @@ enet_sel_hog {
+ 		};
+ 	};
+ };
+-
+-&i2c3 {
+-	/* Capacitive touch controller */
+-	ft5x06_ts: ft5x06_ts@38 {
+-		compatible = "edt,edt-ft5206";
+-		reg = <0x38>;
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&pinctrl_captouch>;
+-		interrupt-parent = <&gpio5>;
+-		interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
+-		touchscreen-size-x = <800>;
+-		touchscreen-size-y = <480>;
+-		touchscreen-inverted-x;
+-		touchscreen-inverted-y;
+-		wakeup-source;
+-		status = "okay";
+-	};
+-
+-	/* DS1337 RTC module */
+-	rtc@68 {
+-		compatible = "dallas,ds1337";
+-		reg = <0x68>;
+-		status = "okay";
+-	};
+-};
+-
+ &i2c4 {
+ 	clock-frequency = <100000>;
+ 	pinctrl-names = "default", "gpio";

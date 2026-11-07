@@ -1,0 +1,1539 @@
+From f1e0cb086ab021b253b43609a9eef7f08ec5ecf2 Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Wed, 13 Sep 2023 13:13:54 +0530
+Subject: [PATCH 1/2] M9000 DAC support
+
+Signed-off-by: MUSIC Tribe
+---
+ .../dts/freescale/imx8mm-var-som-ignite.dts   | 631 ++++++++++++++
+ .../dts/freescale/imx8mm-var-som-ignite.dtsi  | 776 ++++++++++++++++++
+ include/sound/cam9000.h                       |  40 +
+ include/sound/pcm.h                           |   1 +
+ sound/soc/codecs/Kconfig                      |  11 +
+ sound/soc/codecs/Makefile                     |   6 +
+ 6 files changed, 1465 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dts
+ create mode 100644 arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
+ create mode 100644 include/sound/cam9000.h
+
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dts b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dts
+new file mode 100644
+index 000000000..e21c86095
+--- /dev/null
++++ b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dts
+@@ -0,0 +1,631 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Copyright 2019 NXP
++ * Copyright 2019-2021 Variscite Ltd.
++ */
++
++#include "imx8mm-var-som-ignite.dtsi"
++
++/ {
++	model = "Variscite VAR-SOM-MX8M-MINI on Ignite-Board";
++
++	chosen {
++		stdout-path = &uart4;
++	};
++
++	backlight: backlight {
++		compatible = "pwm-backlight";
++		pwms = <&pwm1 0 1000000 0>;
++		brightness-levels = < 0  1  2  3  4  5  6  7  8  9
++				     10 11 12 13 14 15 16 17 18 19
++				     20 21 22 23 24 25 26 27 28 29
++				     30 31 32 33 34 35 36 37 38 39
++				     40 41 42 43 44 45 46 47 48 49
++				     50 51 52 53 54 55 56 57 58 59
++				     60 61 62 63 64 65 66 67 68 69
++				     70 71 72 73 74 75 76 77 78 79
++				     80 81 82 83 84 85 86 87 88 89
++				     90 91 92 93 94 95 96 97 98 99
++				    100>;
++		default-brightness-level = <80>;
++		status = "okay";
++	};
++
++	gpio-keys {
++		compatible = "gpio-keys";
++		status = "okay";
++
++		back {
++			label = "Back";
++			gpios = <&pca9534 1 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_BACK>;
++			wakeup-source;
++		};
++
++		home {
++			label = "Home";
++			gpios = <&pca9534 2 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_HOME>;
++			wakeup-source;
++		};
++
++		menu {
++			label = "Menu";
++			gpios = <&pca9534 3 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_MENU>;
++			wakeup-source;
++		};
++	};
++/*
++	gpio-leds {
++		compatible = "gpio-leds";
++		status = "okay";
++
++		heartbeat {
++			label = "Heartbeat";
++			gpios = <&pca9534 0 GPIO_ACTIVE_HIGH>;
++			linux,default-trigger = "heartbeat";
++		};
++	}; */
++/* This is for CODEC RESET and MUTE GPIO control */
++	leds {
++	compatible = "gpio-leds";
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_gpio_reset>;
++	pinctrl-1 = <&pinctrl_gpio_mute>;
++
++	codecreset {
++		label = "codecreset";
++		gpios = <&gpio4 24 GPIO_ACTIVE_LOW>,
++		<&gpio4 24 GPIO_ACTIVE_LOW>;
++		default-state = "off";
++	};
++	codecmute {
++		label = "codecmute";
++		gpios = <&gpio4 25 GPIO_ACTIVE_HIGH>,
++		<&gpio4 25 GPIO_ACTIVE_HIGH>;
++		default-state = "on";
++		};
++	};
++
++	pcie0_refclk: pcie0-refclk {
++		compatible = "fixed-clock";
++		#clock-cells = <0>;
++		clock-frequency = <100000000>;
++	};
++
++	reg_usdhc2_vmmc: regulator-usdhc2 {
++		compatible = "regulator-fixed";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_reg_usdhc2_vmmc>;
++		regulator-name = "VSD_3V3";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		gpio = <&gpio4 22 GPIO_ACTIVE_HIGH>;
++		off-on-delay = <20000>;
++		enable-active-high;
++	};
++
++	reg_usb_otg2_vbus: regulator-usb-otg2-vbus {
++		compatible = "regulator-fixed";
++		pinctrl-names = "default", "sleep";
++		pinctrl-0 = <&pinctrl_usbotg2>;
++		pinctrl-1 = <&pinctrl_usbotg2_sleep>;
++		regulator-name = "usb_otg2_vbus";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		gpio = <&gpio5 1 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++	};
++};
++
++&i2c2 {
++	clock-frequency = <400000>;
++	pinctrl-names = "default", "gpio";
++	pinctrl-0 = <&pinctrl_i2c2>;
++	pinctrl-1 = <&pinctrl_i2c2_gpio>;
++	scl-gpios = <&gpio5 16 GPIO_ACTIVE_HIGH>;
++	sda-gpios = <&gpio5 17 GPIO_ACTIVE_HIGH>;
++	status = "okay";
++
++	/* USB Type-C Controller */
++/*
++	extcon_ptn5150: typec@3d {
++		compatible = "nxp,ptn5150";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_extcon>;
++		reg = <0x3d>;
++		interrupt-parent = <&gpio1>;
++		interrupts = <11 IRQ_TYPE_NONE>;
++		irq-is-id-quirk;
++		status ="okay";
++
++		port {
++			typec1_dr_sw: endpoint {
++				remote-endpoint = <&usb1_drd_sw>;
++			};
++		};
++	};
++*/
++
++	ov5640_mipi1: ov5640_mipi1@3c {
++		compatible = "ovti,ov5640_mipi";
++		reg = <0x3c>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_csi1>;
++		clocks = <&clk IMX8MM_CLK_CLKO1>;
++		clock-names = "csi_mclk";
++/* Disabled CLKO2, since VAR-SOM-MX8M-MINI camera expansion board uses
++ * its own oscillator. Enable CLK02 if your design requires it
++ */
++#if 0
++		assigned-clocks = <&clk IMX8MM_CLK_CLKO1>;
++		assigned-clock-parents = <&clk IMX8MM_CLK_24M>;
++		assigned-clock-rates = <24000000>;
++#endif
++		csi_id = <0>;
++		pwn-gpios = <&gpio5 12 GPIO_ACTIVE_HIGH>;
++		rst-gpios = <&gpio1 13 GPIO_ACTIVE_LOW>;
++		mclk = <24000000>;
++		mclk_source = <0>;
++		status = "okay";
++
++		port {
++			ov5640_mipi1_ep: endpoint {
++				remote-endpoint = <&mipi1_sensor_ep>;
++			};
++		};
++	};
++
++	/* GPIO expander */
++	pca9534: gpio@20 {
++		compatible = "nxp,pca9534";
++		reg = <0x20>;
++		gpio-controller;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_pca9534>;
++		interrupt-parent = <&gpio1>;
++		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
++		#gpio-cells = <2>;
++		wakeup-source;
++
++		usb3_sel_hog {
++			gpio-hog;
++			gpios = <4 GPIO_ACTIVE_HIGH>;
++			output-low;
++			line-name = "usb3_sel";
++		};
++
++		enet_rst_hog {
++			gpio-hog;
++			gpios = <5 GPIO_ACTIVE_HIGH>;
++			output-low;
++			line-name = "enet_rst";
++		};
++
++		som_vsel_hog {
++			gpio-hog;
++			gpios = <6 GPIO_ACTIVE_HIGH>;
++			output-low;
++			line-name = "som_vsel";
++		};
++
++		enet_sel_hog {
++			gpio-hog;
++			gpios = <7 GPIO_ACTIVE_HIGH>;
++			output-low;
++			line-name = "enet_sel";
++		};
++	};
++	ad5696@c {
++                    compatible = "ad5671r";
++                    reg = <0xc>;
++        };
++};
++
++&i2c3 {
++	/* Capacitive touch controller */
++#if 0 /* setu: commenting this */
++	ft5x06_ts: ft5x06_ts@38 {
++		compatible = "edt,edt-ft5206";
++		reg = <0x38>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_captouch>;
++		interrupt-parent = <&gpio5>;
++		interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
++		touchscreen-size-x = <800>;
++		touchscreen-size-y = <480>;
++		touchscreen-inverted-x;
++		touchscreen-inverted-y;
++		wakeup-source;
++		status = "okay";
++	};
++#endif
++	/* DS1337 RTC module */
++	rtc@68 {
++		compatible = "nxp,pcf8523";
++		reg = <0x68>;
++		pinctrl-0 = <&pinctrl_rtc_gpio>;
++		interrupt-parent = <&gpio1>; 
++		interrupts = <6 IRQ_TYPE_EDGE_FALLING>;				
++		irq-gpios = <&gpio1 6 GPIO_ACTIVE_HIGH>;
++		status = "okay";
++	};
++};
++
++&i2c4 {
++	clock-frequency = <400000>;
++	pinctrl-names = "default", "gpio";
++	pinctrl-0 = <&pinctrl_i2c4>;
++	pinctrl-1 = <&pinctrl_i2c4_gpio>;
++	scl-gpios = <&gpio5 20 GPIO_ACTIVE_HIGH>;
++	sda-gpios = <&gpio5 21 GPIO_ACTIVE_HIGH>;
++	status = "okay";
++
++        ad5696@d {
++                    compatible = "ad5671r";
++                    reg = <0xd>;
++        };
++};
++
++&mipi_csi_1 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++	status = "okay";
++
++	port {
++		mipi1_sensor_ep: endpoint@1 {
++			remote-endpoint = <&ov5640_mipi1_ep>;
++			data-lanes = <2>;
++			csis-hs-settle = <13>;
++			csis-clk-settle = <2>;
++			csis-wclk;
++		};
++
++		csi1_mipi_ep: endpoint@2 {
++			remote-endpoint = <&csi1_ep>;
++		};
++	};
++};
++
++&csi1_bridge {
++	fsl,mipi-mode;
++	status = "okay";
++
++	port {
++		csi1_ep: endpoint {
++			remote-endpoint = <&csi1_mipi_ep>;
++		};
++	};
++};
++
++&panel_lvds {
++	compatible = "panel-lvds";
++	data-mapping = "jeida-24";
++	width-mm = <154>;
++	height-mm = <87>;
++	backlight = <&backlight>;
++
++	panel-timing {
++		clock-frequency = <33000000>;
++		hactive = <1024>;
++		vactive = <600>;
++		hback-porch = <40>;
++		hfront-porch = <40>;
++		vback-porch = <29>;
++		vfront-porch = <13>;
++		hsync-len = <48>;
++		vsync-len = <3>;
++		hsync-active = <0>;
++		vsync-active = <0>;
++		de-active = <1>;
++		pixelclk-active = <0>;
++	};
++};
++
++&pcie0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pcie0>;
++	reset-gpio = <&gpio4 21 GPIO_ACTIVE_LOW>;
++	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
++		 <&clk IMX8MM_CLK_PCIE1_AUX>,
++		 <&clk IMX8MM_CLK_PCIE1_PHY>,
++		 <&pcie0_refclk>;
++	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
++	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
++			  <&clk IMX8MM_CLK_PCIE1_PHY>,
++			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
++	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
++	assigned-clock-parents = <&clk IMX8MM_SYS_PLL2_50M>,
++				 <&clk IMX8MM_SYS_PLL2_100M>,
++				 <&clk IMX8MM_SYS_PLL2_250M>;
++	ext_osc = <1>;
++	l1ss-disabled;
++	status = "okay";
++};
++
++&pcie0_ep {
++	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
++		 <&clk IMX8MM_CLK_PCIE1_AUX>,
++		 <&clk IMX8MM_CLK_PCIE1_PHY>,
++		 <&pcie0_refclk>;
++	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
++	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
++			  <&clk IMX8MM_CLK_PCIE1_PHY>,
++			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
++	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
++	assigned-clock-parents = <&clk IMX8MM_SYS_PLL2_50M>,
++				 <&clk IMX8MM_SYS_PLL2_100M>,
++				 <&clk IMX8MM_SYS_PLL2_250M>;
++	ext_osc = <1>;
++	status = "disabled";
++};
++
++&pwm1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pwm1>;
++	status = "okay";
++};
++
++/* Header */
++&uart1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart1>;
++	status = "okay";
++};
++
++/* Header */
++&uart3 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart3>;
++	status = "okay";
++};
++
++/* Console */
++&uart4 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart4>;
++	status = "okay";
++};
++
++&usbotg1 {
++        dr_mode = "otg";
++        picophy,pre-emp-curr-control = <3>;
++        picophy,dc-vol-level-adjust = <7>;
++        status = "okay";
++};
++
++&usbotg2 {
++        dr_mode = "host";
++        vbus-supply = <&reg_usb_otg2_vbus>;
++        picophy,pre-emp-curr-control = <3>;
++        picophy,dc-vol-level-adjust = <7>;
++        srp-disable;
++        hnp-disable;
++        adp-disable;
++        disable-over-current;
++        status = "okay";
++};
++
++
++
++/*&usbotg1 {
++	dr_mode = "otg";
++	hnp-disable;
++	srp-disable;
++	adp-disable;
++	usb-role-switch;
++	disable-over-current;
++	samsung,picophy-pre-emp-curr-control = <3>;
++	samsung,picophy-dc-vol-level-adjust = <7>;
++	status = "okay";
++};
++
++&usbotg2 {
++	dr_mode = "host";
++	vbus-supply = <&reg_usb_otg2_vbus>;
++	picophy,pre-emp-curr-control = <3>;
++	picophy,dc-vol-level-adjust = <7>;
++	disable-over-current;
++	status = "okay";
++};
++*/
++/* SD */
++&usdhc2 {
++	pinctrl-names = "default", "state_100mhz", "state_200mhz";
++	pinctrl-0 = <&pinctrl_usdhc2>, <&pinctrl_usdhc2_gpio>;
++	pinctrl-1 = <&pinctrl_usdhc2_100mhz>, <&pinctrl_usdhc2_gpio>;
++	pinctrl-2 = <&pinctrl_usdhc2_200mhz>, <&pinctrl_usdhc2_gpio>;
++	cd-gpios = <&gpio1 10 GPIO_ACTIVE_LOW>;
++	bus-width = <4>;
++	vmmc-supply = <&reg_usdhc2_vmmc>;
++	status = "okay";
++};
++
++&gpio4 {
++	cam_buf_hog {
++		gpio-hog;
++		gpios = <5 GPIO_ACTIVE_HIGH>;
++		output-low;
++		line-name = "cam_buf_en";
++	};
++};
++
++&snvs_pwrkey {
++	status = "okay";
++};
++
++&snvs_rtc {
++	status = "disabled";
++};
++
++&iomuxc {
++	pinctrl_i2c2: i2c2grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_I2C2_SCL_I2C2_SCL			0x400001c3
++			MX8MM_IOMUXC_I2C2_SDA_I2C2_SDA			0x400001c3
++		>;
++	};
++
++	pinctrl_i2c4: i2c4grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_I2C4_SCL_I2C4_SCL			0x400001c3
++			MX8MM_IOMUXC_I2C4_SDA_I2C4_SDA			0x400001c3
++		>;
++	};
++
++	pinctrl_i2c2_gpio: i2c2grp-gpio {
++		fsl,pins = <
++			MX8MM_IOMUXC_I2C2_SCL_GPIO5_IO16		0x1c3
++			MX8MM_IOMUXC_I2C2_SDA_GPIO5_IO17		0x1c3
++		>;
++	};
++
++	pinctrl_i2c4_gpio: i2c4grp-gpio {
++		fsl,pins = <
++			MX8MM_IOMUXC_I2C4_SCL_GPIO5_IO20		0x1c3
++			MX8MM_IOMUXC_I2C4_SDA_GPIO5_IO21		0x1c3
++		>;
++	};
++
++	pinctrl_uart1: uart1grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_UART1_RXD_UART1_DCE_RX		0x140
++			MX8MM_IOMUXC_UART1_TXD_UART1_DCE_TX		0x140
++		>;
++	};
++
++	pinctrl_uart3: uart3grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_UART3_RXD_UART3_DCE_RX		0x140
++			MX8MM_IOMUXC_UART3_TXD_UART3_DCE_TX		0x140
++		>;
++	};
++
++	pinctrl_uart4: uart4grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_UART4_RXD_UART4_DCE_RX		0x140
++			MX8MM_IOMUXC_UART4_TXD_UART4_DCE_TX		0x140
++		>;
++	};
++
++
++	/* This is for CODEC RESET GPIO pins */
++	pinctrl_gpio_reset: gpioreset {
++		fsl,pins = <
++			MX8MM_IOMUXC_SAI2_TXFS_GPIO4_IO24		0x41
++		>;
++	};
++
++	/* This is for CODEC AMP ENABLE GPIO pins */
++	pinctrl_gpio_mute: gpiomute {
++		fsl,pins = <
++			MX8MM_IOMUXC_SAI2_TXC_GPIO4_IO25		0x41
++		>;
++	};
++
++	pinctrl_rtc_gpio: gpiomute {
++		fsl,pins = <
++			MX8MM_IOMUXC_GPIO1_IO06_GPIO1_IO6		0x1d0
++		>;
++	};
++
++	pinctrl_reg_usdhc2_vmmc: regusdhc2vmmc {
++		fsl,pins = <
++			MX8MM_IOMUXC_SAI1_RXC_SAI1_RX_BCLK		0x41
++			/*MX8MM_IOMUXC_SAI2_RXC_GPIO4_IO22		0x41*/
++		>;
++	};
++
++	pinctrl_usdhc2_gpio: usdhc2grpgpio {
++		fsl,pins = <
++			MX8MM_IOMUXC_GPIO1_IO10_GPIO1_IO10		0xc1
++		>;
++	};
++
++	pinctrl_usdhc2: usdhc2grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD2_CLK_USDHC2_CLK			0x190
++			MX8MM_IOMUXC_SD2_CMD_USDHC2_CMD			0x1d0
++			MX8MM_IOMUXC_SD2_DATA0_USDHC2_DATA0		0x1d0
++			MX8MM_IOMUXC_SD2_DATA1_USDHC2_DATA1		0x1d0
++			MX8MM_IOMUXC_SD2_DATA2_USDHC2_DATA2		0x1d0
++			MX8MM_IOMUXC_SD2_DATA3_USDHC2_DATA3		0x1d0
++			MX8MM_IOMUXC_GPIO1_IO04_USDHC2_VSELECT		0x1d0
++		>;
++	};
++
++	pinctrl_usdhc2_100mhz: usdhc2grp100mhz {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD2_CLK_USDHC2_CLK			0x194
++			MX8MM_IOMUXC_SD2_CMD_USDHC2_CMD			0x1d4
++			MX8MM_IOMUXC_SD2_DATA0_USDHC2_DATA0		0x1d4
++			MX8MM_IOMUXC_SD2_DATA1_USDHC2_DATA1		0x1d4
++			MX8MM_IOMUXC_SD2_DATA2_USDHC2_DATA2		0x1d4
++			MX8MM_IOMUXC_SD2_DATA3_USDHC2_DATA3		0x1d4
++			MX8MM_IOMUXC_GPIO1_IO04_USDHC2_VSELECT		0x1d0
++		>;
++	};
++
++	pinctrl_usdhc2_200mhz: usdhc2grp200mhz {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD2_CLK_USDHC2_CLK			0x196
++			MX8MM_IOMUXC_SD2_CMD_USDHC2_CMD			0x1d6
++			MX8MM_IOMUXC_SD2_DATA0_USDHC2_DATA0		0x1d6
++			MX8MM_IOMUXC_SD2_DATA1_USDHC2_DATA1		0x1d6
++			MX8MM_IOMUXC_SD2_DATA2_USDHC2_DATA2		0x1d6
++			MX8MM_IOMUXC_SD2_DATA3_USDHC2_DATA3		0x1d6
++			MX8MM_IOMUXC_GPIO1_IO04_USDHC2_VSELECT		0x1d0
++		>;
++	};
++
++	pinctrl_pwm1: pwm1grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SPDIF_EXT_CLK_PWM1_OUT		0x06
++		>;
++	};
++
++	pinctrl_captouch: captouchgrp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SPDIF_RX_GPIO5_IO4			0x16
++		>;
++	};
++
++	pinctrl_extcon: extcongrp {
++		fsl,pins = <
++			MX8MM_IOMUXC_GPIO1_IO11_GPIO1_IO11		0x16
++		>;
++	};
++
++	pinctrl_usbotg2: usbotg2grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SAI3_TXD_GPIO5_IO1			0x16
++		>;
++	};
++
++	pinctrl_usbotg2_sleep: usbotg2grpsleep {
++		fsl,pins = <
++			MX8MM_IOMUXC_SAI3_TXD_GPIO5_IO1			0x120
++		>;
++	};
++
++	pinctrl_csi1: csi1grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_GPIO1_IO13_GPIO1_IO13		0x19 /* CAM_RST */
++			MX8MM_IOMUXC_ECSPI2_MISO_GPIO5_IO12		0x19 /* CAM_PWR */
++			MX8MM_IOMUXC_SAI1_RXD3_GPIO4_IO5		0x19 /* CAM_BUF */
++		>;
++	};
++
++	pinctrl_pca9534: pca9534grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_GPIO1_IO07_GPIO1_IO7		0x16
++		>;
++	};
++
++	pinctrl_pcie0: pcie0grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SAI2_RXFS_GPIO4_IO21		0x41
++		>;
++	};
++};
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
+new file mode 100644
+index 000000000..c99c7ca2a
+--- /dev/null
++++ b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
+@@ -0,0 +1,776 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Copyright 2019 NXP
++ * Copyright 2019-2021 Variscite Ltd.
++ */
++
++/dts-v1/;
++
++#include <dt-bindings/usb/pd.h>
++#include "imx8mm.dtsi"
++
++/ {
++	compatible = "variscite,imx8mm-var-som", "fsl,imx8mm";
++
++	memory@40000000 {
++		device_type = "memory";
++		reg = <0x0 0x40000000 0 0x80000000>;
++	};
++
++	panel_lvds: panel-lvds {
++		compatible = "panel-lvds";
++
++		port {
++			panel_in_bridge: endpoint {
++				remote-endpoint = <&bridge_out_panel>;
++			};
++		};
++	};
++
++	reg_audio: audio_vdd {
++		compatible = "regulator-fixed";
++		regulator-name = "wm8904_supply";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-always-on;
++	};
++
++	reg_eth_phy: regulator-eth-phy {
++		compatible = "regulator-fixed";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_reg_eth_phy>;
++		regulator-name = "eth_phy_pwr";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-enable-ramp-delay = <20000>;
++		gpio = <&gpio2 9 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++	};
++
++	reserved-memory {
++		/* cma region is provided by kernel command line as cma=<size>M */
++		/delete-node/ linux,cma;
++	};
++
++
++	/* Below entry is for Cool Audio codec M9000 */
++	sound-cam9000 {
++		compatible = "simple-audio-card";
++		simple-audio-card,bitclock-master = <&dailink_master>;
++		simple-audio-card,format = "i2s";
++		simple-audio-card,frame-master = <&dailink_master>;
++		simple-audio-card,name = "cam9000-audio";		
++		/* audio-codec = <&codec>;		
++		cpu-dai = <&sai2>; */
++
++		simple-audio-card,widgets =
++			"Headphone", "Headphone Jack";
++		simple-audio-card,routing =
++			"Headphone Jack", "HPOUTL",
++			"Headphone Jack", "HPOUTR";
++		simple-audio-card,mclk-fs = <512>;	
++		simple-audio-card,codec {		
++			sound-dai = <&codec1>;
++		};
++		dailink_master: simple-audio-card,cpu {
++			sound-dai = <&sai2>;
++			clock-names = "mclk";
++			/* clocks = <&clk IMX8MM_CLK_SAI2_ROOT>; */
++			/* system-clock-frequency = <883200>;     setus:  in order to get an LRCLK of 48 kHz */
++		};
++	};
++	
++	sound-spdif {
++		compatible = "fsl,imx-audio-spdif";
++		model = "imx-spdif";
++		spdif-controller = <&spdif1>;
++		spdif-out;
++		spdif-in;
++		status = "disabled";
++	};
++
++};
++
++&A53_0 {
++	cpu-supply = <&buck2_reg>;
++};
++
++&A53_1 {
++	cpu-supply = <&buck2_reg>;
++};
++
++&A53_2 {
++	cpu-supply = <&buck2_reg>;
++};
++
++&A53_3 {
++	cpu-supply = <&buck2_reg>;
++};
++
++&ddrc {
++	operating-points-v2 = <&ddrc_opp_table>;
++
++	ddrc_opp_table: opp-table {
++		compatible = "operating-points-v2";
++
++		opp-266M {
++			opp-hz = /bits/ 64 <266500000>;
++		};
++
++		opp-600M {
++			opp-hz = /bits/ 64 <600000000>;
++		};
++	};
++};
++
++&fec1 {
++	pinctrl-names = "default", "sleep";
++	pinctrl-0 = <&pinctrl_fec1>;
++	pinctrl-1 = <&pinctrl_fec1_sleep>;
++	phy-mode = "rgmii";
++	phy-handle = <&ethphy0>;
++	phy-supply = <&reg_eth_phy>;
++	phy-reset-on-resume;
++	status = "okay";
++
++	mdio {
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		ethphy0: ethernet-phy@4 {
++			compatible = "ethernet-phy-ieee802.3-c22";
++			reg = <4>;
++			at803x,led-act-blind-workaround;
++			qca,disable-smarteee;
++			vddio-supply = <&vddio>;
++			reset-gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
++			reset-assert-us = <10000>;
++			reset-deassert-us = <20000>;
++
++			vddio: vddio-regulator {
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++			};
++		};
++	};
++};
++
++&i2c1 {
++	clock-frequency = <400000>;
++	pinctrl-names = "default", "gpio";
++	pinctrl-0 = <&pinctrl_i2c1>;
++	pinctrl-1 = <&pinctrl_i2c1_gpio>;
++	scl-gpios = <&gpio5 14 GPIO_ACTIVE_HIGH>;
++	sda-gpios = <&gpio5 15 GPIO_ACTIVE_HIGH>;
++	status = "okay";
++
++	dsi_lvds_bridge: sn65dsi84@2c {
++		compatible = "ti,sn65dsi84";
++		reg = <0x2c>;
++		enable-gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_lvds>;
++		status = "okay";
++
++		display-timings {
++                        lvds {
++                                clock-frequency = <33000000>;
++                                hactive = <1024>;        /*  tried 1366 & 1000 as well.. 1024 works..*/
++                                vactive = <600>;          /* tried 800 & 768 as well .. 600 works.. */
++                                hback-porch = <40>;
++                                hfront-porch = <40>;
++                                vback-porch = <29>;
++                                vfront-porch = <13>;
++                                hsync-len = <48>;
++                                vsync-len = <3>;
++                                hsync-active = <0>;
++                                vsync-active = <0>;
++                                de-active = <1>;
++                                pixelclk-active = <0>;
++                        };
++                };
++
++
++		ports {
++			#address-cells = <1>;
++			#size-cells = <0>;
++
++			port@0 {
++				reg = <0>;
++				bridge_in_dsi: endpoint {
++					remote-endpoint = <&mipi_dsi_out>;
++					data-lanes = <1 2 3 4>;
++				};
++			};
++
++			port@2 {
++				reg = <2>;
++				bridge_out_panel: endpoint {
++					remote-endpoint = <&panel_in_bridge>;
++				};
++			};
++		};
++	};
++
++	pmic@4b {
++		compatible = "rohm,bd71847";
++		reg = <0x4b>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_pmic>;
++		interrupt-parent = <&gpio2>;
++		interrupts = <8 IRQ_TYPE_LEVEL_LOW>;
++		rohm,reset-snvs-powered;
++		status = "okay";
++
++		regulators {
++			buck1_reg: BUCK1 {
++				regulator-name = "BUCK1";
++				regulator-min-microvolt = <700000>;
++				regulator-max-microvolt = <1300000>;
++				regulator-boot-on;
++				regulator-always-on;
++				regulator-ramp-delay = <1250>;
++			};
++
++			buck2_reg: BUCK2 {
++				regulator-name = "BUCK2";
++				regulator-min-microvolt = <700000>;
++				regulator-max-microvolt = <1300000>;
++				regulator-boot-on;
++				regulator-always-on;
++				regulator-ramp-delay = <1250>;
++				rohm,dvs-run-voltage = <1000000>;
++				rohm,dvs-idle-voltage = <900000>;
++			};
++
++			buck3_reg: BUCK3 {
++				// BUCK5 in datasheet
++				regulator-name = "BUCK3";
++				regulator-min-microvolt = <700000>;
++				regulator-max-microvolt = <1350000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			buck4_reg: BUCK4 {
++				// BUCK6 in datasheet
++				regulator-name = "BUCK4";
++				regulator-min-microvolt = <2600000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			buck5_reg: BUCK5 {
++				// BUCK7 in datasheet
++				regulator-name = "BUCK5";
++				regulator-min-microvolt = <1605000>;
++				regulator-max-microvolt = <1995000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			buck6_reg: BUCK6 {
++				// BUCK8 in datasheet
++				regulator-name = "BUCK6";
++				regulator-min-microvolt = <800000>;
++				regulator-max-microvolt = <1400000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			ldo1_reg: LDO1 {
++				regulator-name = "LDO1";
++				regulator-min-microvolt = <1600000>;
++				regulator-max-microvolt = <1900000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			ldo2_reg: LDO2 {
++				regulator-name = "LDO2";
++				regulator-min-microvolt = <800000>;
++				regulator-max-microvolt = <900000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			ldo3_reg: LDO3 {
++				regulator-name = "LDO3";
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <3300000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++
++			ldo4_reg: LDO4 {
++				regulator-name = "LDO4";
++				regulator-min-microvolt = <900000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-always-on;
++			};
++
++			ldo5_reg: LDO5 {
++				regulator-name = "LDO5";
++				regulator-min-microvolt = <1800000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-always-on;
++			};
++
++			ldo6_reg: LDO6 {
++				regulator-name = "LDO6";
++				regulator-min-microvolt = <900000>;
++				regulator-max-microvolt = <1800000>;
++				regulator-boot-on;
++				regulator-always-on;
++			};
++		};
++	};
++};
++
++&i2c3 {
++	clock-frequency = <400000>;
++	pinctrl-names = "default", "gpio";
++	pinctrl-0 = <&pinctrl_i2c3>;
++	pinctrl-1 = <&pinctrl_i2c3_gpio>;
++	scl-gpios = <&gpio5 18 GPIO_ACTIVE_HIGH>;
++	sda-gpios = <&gpio5 19 GPIO_ACTIVE_HIGH>;
++	status = "okay";
++
++
++	gt911: touchscreen@14 {									/*changing from 0x14 to 0x5D*/
++			compatible = "goodix,gt911";
++			reg = <0x14>;
++			pinctrl-names = "default";
++			pinctrl-0 = <&pinctrl_gt911_ts_gpio>;  			/* Custom pinctrl group node */
++
++			interrupt-parent = <&gpio5>; 					/* Use the correct gpio controller here */
++			interrupts = <25 IRQ_TYPE_EDGE_FALLING>;				/* setu: IRQ_TYPE_NONE not working, try with IRQ_TYPE_EDGE_FALLING and IRQ_TYPE_EDGE_RISING */
++			irq-gpios = <&gpio5 25 GPIO_ACTIVE_HIGH>;
++			reset-gpios = <&gpio4 4 GPIO_ACTIVE_LOW>;  /*Use the correct gpio controller and pin */			
++			touchscreen-size-x = <800>;
++			touchscreen-size-y = <480>;
++           status = "okay";
++    };
++
++
++    	codec1: codec1@4d {
++              compatible = "coolaudio,cam9000";
++              reg = <0x4d>;
++	      clocks = <&clk IMX8MM_CLK_SAI2_ROOT>;
++	      clock-names = "mclk";
++	      #sound-dai-cells = <0>;
++	      pinctrl-0 = <&pinctrl_codec_gpio>; 
++	      reset-gpios = <&gpio4 24 GPIO_ACTIVE_LOW>;
++	      coolaudio,enable-soft-reset;
++	      status = "okay";
++   };
++};
++
++/* setu: added for v4220m coolaudio codec*/
++/* same interface used for coolaudio m9000*/
++&sai2 {
++	#sound-dai-cells = <0>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_sai2>;
++	assigned-clocks = <&clk IMX8MM_CLK_SAI2>;
++	assigned-clock-parents = <&clk IMX8MM_AUDIO_PLL1_OUT>;
++	/* assigned-clock-rates = <1536000>; */
++	assigned-clock-rates = <24576000>;        /*setu: this is supposed to be our MCLK */
++	fsl,sai-synchronous-rx;
++	fsl,sai-mclk-direction-output;
++	status = "okay";
++};
++/*
++&sai5 {
++	#sound-dai-cells = <0>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_sai5>;
++	assigned-clocks = <&clk IMX8MM_CLK_SAI5>;
++	assigned-clock-parents = <&clk IMX8MM_AUDIO_PLL1_OUT>;
++	assigned-clock-rates = <1536000>;
++	fsl,sai-multi-lane;
++	dmas = <&sdma2 8 25 0>, <&sdma2 9 25 0>;
++	status = "okay";
++};
++*/
++
++&spdif1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_spdif1>;
++	assigned-clocks = <&clk IMX8MM_CLK_SPDIF1>;
++	assigned-clock-parents = <&clk IMX8MM_AUDIO_PLL1_OUT>;
++	assigned-clock-rates = <24576000>;
++	clocks = <&clk IMX8MM_CLK_AUDIO_AHB>, <&clk IMX8MM_CLK_24M>,
++		<&clk IMX8MM_CLK_SPDIF1>, <&clk IMX8MM_CLK_DUMMY>,
++		<&clk IMX8MM_CLK_DUMMY>, <&clk IMX8MM_CLK_DUMMY>,
++		<&clk IMX8MM_CLK_AUDIO_AHB>, <&clk IMX8MM_CLK_DUMMY>,
++		<&clk IMX8MM_CLK_DUMMY>, <&clk IMX8MM_CLK_DUMMY>,
++		<&clk IMX8MM_AUDIO_PLL1_OUT>, <&clk IMX8MM_AUDIO_PLL2_OUT>;
++	clock-names = "core", "rxtx0", "rxtx1", "rxtx2", "rxtx3",
++		"rxtx4", "rxtx5", "rxtx6", "rxtx7", "spba", "pll8k", "pll11k";
++	status = "disabled";
++};
++
++/* Bluetooth */
++&uart2 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart2>, <&pinctrl_bt>;
++	assigned-clocks = <&clk IMX8MM_CLK_UART2>;
++	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
++	uart-has-rtscts;
++	status = "okay";
++};
++
++/* WIFI */
++&usdhc1 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++	pinctrl-names = "default", "state_100mhz", "state_200mhz";
++	pinctrl-0 = <&pinctrl_usdhc1>, <&pinctrl_wifi>;
++	pinctrl-1 = <&pinctrl_usdhc1_100mhz>, <&pinctrl_wifi>;
++	pinctrl-2 = <&pinctrl_usdhc1_200mhz>, <&pinctrl_wifi>;
++	bus-width = <4>;
++	non-removable;
++	keep-power-in-suspend;
++	status = "okay";
++
++	brcmf: wifi@1 {
++		reg = <1>;
++		compatible = "brcm,bcm4329-fmac";
++		laird,regdomain = "US";
++	};
++};
++
++/* EMMC */
++&usdhc3 {
++	pinctrl-names = "default", "state_100mhz", "state_200mhz";
++	pinctrl-0 = <&pinctrl_usdhc3>;
++	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
++	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
++	bus-width = <8>;
++	non-removable;
++	status = "okay";
++};
++
++&mipi_dsi {
++	status = "okay";
++
++	port@1 {
++		mipi_dsi_out: endpoint {
++			remote-endpoint = <&bridge_in_dsi>;
++			attach-bridge;
++		};
++	};
++};
++
++&wdog1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_wdog>;
++	fsl,ext-reset-output;
++	status = "okay";
++};
++
++
++&mu {
++	status = "okay";
++};
++
++&lcdif {
++	status = "okay";
++};
++
++&gpu {
++	status = "okay";
++};
++
++&vpu_g1 {
++	status = "okay";
++};
++
++&vpu_g2 {
++	status = "okay";
++};
++
++&vpu_h1 {
++	status = "okay";
++};
++
++&vpu_v4l2 {
++	status = "okay";
++};
++
++&iomuxc {
++	pinctrl_fec1: fec1grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_ENET_MDC_ENET1_MDC			0x3
++			MX8MM_IOMUXC_ENET_MDIO_ENET1_MDIO		0x3
++			MX8MM_IOMUXC_ENET_TD3_ENET1_RGMII_TD3		0x1f
++			MX8MM_IOMUXC_ENET_TD2_ENET1_RGMII_TD2		0x1f
++			MX8MM_IOMUXC_ENET_TD1_ENET1_RGMII_TD1		0x1f
++			MX8MM_IOMUXC_ENET_TD0_ENET1_RGMII_TD0		0x1f
++			MX8MM_IOMUXC_ENET_RD3_ENET1_RGMII_RD3		0x91
++			MX8MM_IOMUXC_ENET_RD2_ENET1_RGMII_RD2		0x91
++			MX8MM_IOMUXC_ENET_RD1_ENET1_RGMII_RD1		0x91
++			MX8MM_IOMUXC_ENET_RD0_ENET1_RGMII_RD0		0x91
++			MX8MM_IOMUXC_ENET_TXC_ENET1_RGMII_TXC		0x1f
++			MX8MM_IOMUXC_ENET_RXC_ENET1_RGMII_RXC		0x91
++			MX8MM_IOMUXC_ENET_RX_CTL_ENET1_RGMII_RX_CTL	0x91
++			MX8MM_IOMUXC_ENET_TX_CTL_ENET1_RGMII_TX_CTL	0x1f
++			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9		0x19
++		>;
++	};
++
++	pinctrl_fec1_sleep: fec1grpsleep {
++		fsl,pins = <
++			MX8MM_IOMUXC_ENET_MDC_GPIO1_IO16		0x120
++			MX8MM_IOMUXC_ENET_MDIO_GPIO1_IO17		0x120
++			MX8MM_IOMUXC_ENET_TD3_GPIO1_IO18		0x120
++			MX8MM_IOMUXC_ENET_TD2_GPIO1_IO19		0x120
++			MX8MM_IOMUXC_ENET_TD1_GPIO1_IO20		0x120
++			MX8MM_IOMUXC_ENET_TD0_GPIO1_IO21		0x120
++			MX8MM_IOMUXC_ENET_RD3_GPIO1_IO29		0x120
++			MX8MM_IOMUXC_ENET_RD2_GPIO1_IO28		0x120
++			MX8MM_IOMUXC_ENET_RD1_GPIO1_IO27		0x120
++			MX8MM_IOMUXC_ENET_RD0_GPIO1_IO26		0x120
++			MX8MM_IOMUXC_ENET_TXC_GPIO1_IO23		0x120
++			MX8MM_IOMUXC_ENET_RXC_GPIO1_IO25		0x120
++			MX8MM_IOMUXC_ENET_RX_CTL_GPIO1_IO24		0x120
++			MX8MM_IOMUXC_ENET_TX_CTL_GPIO1_IO22		0x120
++			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9		0x100
++		>;
++	};
++
++	pinctrl_i2c1: i2c1grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_I2C1_SCL_I2C1_SCL			0x400001c3
++			MX8MM_IOMUXC_I2C1_SDA_I2C1_SDA			0x400001c3
++		>;
++	};
++
++	pinctrl_i2c3: i2c3grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_I2C3_SCL_I2C3_SCL			0x400001c3
++			MX8MM_IOMUXC_I2C3_SDA_I2C3_SDA			0x400001c3
++		>;
++	};
++
++	pinctrl_i2c1_gpio: i2c1grp-gpio {
++		fsl,pins = <
++			MX8MM_IOMUXC_I2C1_SCL_GPIO5_IO14		0x1c3
++			MX8MM_IOMUXC_I2C1_SDA_GPIO5_IO15		0x1c3
++		>;
++	};
++	
++	pinctrl_gt911_ts_gpio: gt911_ts_gpiogrp {
++        fsl,pins = <
++ 
++			MX8MM_IOMUXC_UART2_TXD_GPIO5_IO25        0x1d6  /* Interrupt -->> new one : GPIO5_IO25 */ 
++           MX8MM_IOMUXC_SAI1_RXD2_GPIO4_IO4        0x149 /* Reset -->> new one : MX8MM_IOMUXC_UART3_RXD_GPIO5_IO26 : , */
++        >;
++    };
++
++	pinctrl_codec_gpio: codec_gpiogrp {
++        fsl,pins = <
++			MX8MM_IOMUXC_SAI2_TXFS_GPIO4_IO24		0x41
++		>;
++	};
++		
++	pinctrl_i2c3_gpio: i2c3grp-gpio {
++		fsl,pins = <
++			MX8MM_IOMUXC_I2C3_SCL_GPIO5_IO18		0x1c3
++			MX8MM_IOMUXC_I2C3_SDA_GPIO5_IO19		0x1c3
++		>;
++	};
++
++	pinctrl_lvds: lvdsgrp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD1_STROBE_GPIO2_IO11		0x16
++		>;
++	};
++
++	pinctrl_pmic: pmicgrp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD1_DATA6_GPIO2_IO8		0x140
++		>;
++	};
++
++	pinctrl_reg_eth_phy: regethphy {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD1_DATA7_GPIO2_IO9		0x41
++		>;
++	};
++
++	pinctrl_sai5: sai5grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SAI5_RXD1_SAI5_TX_SYNC		0xd6
++			MX8MM_IOMUXC_SAI5_RXFS_SAI5_RX_SYNC		0xd6
++			MX8MM_IOMUXC_SAI5_RXD3_SAI5_TX_DATA0		0xd6
++			MX8MM_IOMUXC_SAI5_RXD0_SAI5_RX_DATA0		0xd6
++			MX8MM_IOMUXC_SAI5_RXC_SAI5_RX_BCLK		0xd6
++			MX8MM_IOMUXC_SAI5_RXD2_SAI5_TX_BCLK		0xd6
++			MX8MM_IOMUXC_SAI5_MCLK_SAI5_MCLK		0xd6
++		>;
++	};
++	/* setu: V4220M codec settings
++	I2S_DAT_ADC (SAI2_RXD0)    (SAI2_RXD0/SAI5_TXD0////UART1_RTS_B/////GPIO4_IO23)            -->> MX8MM_IOMUXC_SAI2_RXD0_SAI2_RX_DATA0
++	I2S_DAT_DAC (SAI2_TXD0)    (SAI2_TXD0/SAI5_TXD3/////GPIO4_IO26)                           -->> MX8MM_IOMUXC_SAI2_TXD0_SAI2_TX_DATA0
++	I2S_BCLK    (SAI2_RXC)     (SAI2_RXC/SAI5_TXC///UART1_RXD/////GPIO4_IO22)                 -->> MX8MM_IOMUXC_SAI2_RXC_SAI2_RX_BCLK
++	I2S_LRCK    (SAI2_RXFS)    (SAI2_RXFS/SAI5_TXFS//SAI5_TXD1///SAI2_RXD////UART1_TXD/////GPIO4_IO21) -->>  MX8MM_IOMUXC_SAI2_RXFS_SAI2_RX_SYNC
++	I2S_MCLK    (SAI2_MCLK)     (SAI2_MCLK/SAI5_MCLK/////GPIO4_IO27)                         -->>  MX8MM_IOMUXC_SAI2_MCLK_SAI2_MCLK
++	
++	nMUTE_SOM   (GPIO4_IO25)   (SAI2_TXC/SAI5_TXD2/////GPIO4_IO25)                             -->> MX8MM_IOMUXC_SAI2_TXC_GPIO4_IO25
++	nCODEC_RST  (GPIO4_IO24)   (SAI2_TXFS/SAI5_TXD1///SAI2_TXD1////UART1_CTS_B/////GPIO4_IO24) -->> MX8MM_IOMUXC_SAI2_TXFS_GPIO4_IO24
++	*/
++	pinctrl_sai2: sai2grp {
++		fsl,pins = <
++		/*	MX8MM_IOMUXC_SAI2_TXFS_SAI2_TX_SYNC		0xd6        updated.. MAY BE, NOT Required coz may b needed by nCODEC_RST */
++			MX8MM_IOMUXC_SAI2_RXFS_SAI2_RX_SYNC		0xd6       /* there : Required for I2S_LRCLK*/
++			MX8MM_IOMUXC_SAI2_TXD0_SAI2_TX_DATA0		0xd6   /* updated DAT_DAC : Required for I2S_DAT_DAC */
++			MX8MM_IOMUXC_SAI2_RXD0_SAI2_RX_DATA0		0xd6  /* there DAT_ADC : Required for I2S_DAT_ADC */
++			MX8MM_IOMUXC_SAI2_RXC_SAI2_RX_BCLK		0xd6      /*  there: Required for I2S_BCLK: but ambigous, cant use since its used by SDCard: pinctrl_reg_usdhc2_vmmc */
++		/*	MX8MM_IOMUXC_SAI2_TXC_SAI2_TX_BCLK		0xd6       updated ..  MAY BE, NOT Required coz may b needed by nMUTE_SOM*/
++			MX8MM_IOMUXC_SAI2_MCLK_SAI2_MCLK		0xd6      /* there : Required for I2S_MCLK*/
++		>;
++	};
++	pinctrl_spdif1: spdif1grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SPDIF_TX_SPDIF1_OUT		0xd6
++			MX8MM_IOMUXC_SPDIF_RX_SPDIF1_IN			0xd6
++		>;
++	};
++
++	pinctrl_uart2: uart2grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SAI3_TXFS_UART2_DCE_RX		0x140
++			MX8MM_IOMUXC_SAI3_TXC_UART2_DCE_TX		0x140
++			MX8MM_IOMUXC_SAI3_RXC_UART2_DCE_CTS_B		0x140
++			MX8MM_IOMUXC_SAI3_RXD_UART2_DCE_RTS_B		0x140
++		>;
++	};
++
++	pinctrl_usdhc1: usdhc1grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD1_CLK_USDHC1_CLK			0x190
++			MX8MM_IOMUXC_SD1_CMD_USDHC1_CMD			0x1d0
++			MX8MM_IOMUXC_SD1_DATA0_USDHC1_DATA0		0x1d0
++			MX8MM_IOMUXC_SD1_DATA1_USDHC1_DATA1		0x1d0
++			MX8MM_IOMUXC_SD1_DATA2_USDHC1_DATA2		0x1d0
++			MX8MM_IOMUXC_SD1_DATA3_USDHC1_DATA3		0x1d0
++		>;
++	};
++
++	pinctrl_usdhc1_100mhz: usdhc1grp100mhz {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD1_CLK_USDHC1_CLK			0x194
++			MX8MM_IOMUXC_SD1_CMD_USDHC1_CMD			0x1d4
++			MX8MM_IOMUXC_SD1_DATA0_USDHC1_DATA0		0x1d4
++			MX8MM_IOMUXC_SD1_DATA1_USDHC1_DATA1		0x1d4
++			MX8MM_IOMUXC_SD1_DATA2_USDHC1_DATA2		0x1d4
++			MX8MM_IOMUXC_SD1_DATA3_USDHC1_DATA3		0x1d4
++		>;
++	};
++
++	pinctrl_usdhc1_200mhz: usdhc1grp200mhz {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD1_CLK_USDHC1_CLK			0x196
++			MX8MM_IOMUXC_SD1_CMD_USDHC1_CMD			0x1d6
++			MX8MM_IOMUXC_SD1_DATA0_USDHC1_DATA0		0x1d6
++			MX8MM_IOMUXC_SD1_DATA1_USDHC1_DATA1		0x1d6
++			MX8MM_IOMUXC_SD1_DATA2_USDHC1_DATA2		0x1d6
++			MX8MM_IOMUXC_SD1_DATA3_USDHC1_DATA3		0x1d6
++		>;
++	};
++
++	pinctrl_usdhc3: usdhc3grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_NAND_WE_B_USDHC3_CLK		0x190
++			MX8MM_IOMUXC_NAND_WP_B_USDHC3_CMD		0x1d0
++			MX8MM_IOMUXC_NAND_DATA04_USDHC3_DATA0		0x1d0
++			MX8MM_IOMUXC_NAND_DATA05_USDHC3_DATA1		0x1d0
++			MX8MM_IOMUXC_NAND_DATA06_USDHC3_DATA2		0x1d0
++			MX8MM_IOMUXC_NAND_DATA07_USDHC3_DATA3		0x1d0
++			MX8MM_IOMUXC_NAND_RE_B_USDHC3_DATA4		0x1d0
++			MX8MM_IOMUXC_NAND_CE2_B_USDHC3_DATA5		0x1d0
++			MX8MM_IOMUXC_NAND_CE3_B_USDHC3_DATA6		0x1d0
++			MX8MM_IOMUXC_NAND_CLE_USDHC3_DATA7		0x1d0
++			MX8MM_IOMUXC_NAND_CE1_B_USDHC3_STROBE 		0x190
++		>;
++	};
++
++	pinctrl_usdhc3_100mhz: usdhc3grp100mhz {
++		fsl,pins = <
++			MX8MM_IOMUXC_NAND_WE_B_USDHC3_CLK		0x194
++			MX8MM_IOMUXC_NAND_WP_B_USDHC3_CMD		0x1d4
++			MX8MM_IOMUXC_NAND_DATA04_USDHC3_DATA0		0x1d4
++			MX8MM_IOMUXC_NAND_DATA05_USDHC3_DATA1		0x1d4
++			MX8MM_IOMUXC_NAND_DATA06_USDHC3_DATA2		0x1d4
++			MX8MM_IOMUXC_NAND_DATA07_USDHC3_DATA3		0x1d4
++			MX8MM_IOMUXC_NAND_RE_B_USDHC3_DATA4		0x1d4
++			MX8MM_IOMUXC_NAND_CE2_B_USDHC3_DATA5		0x1d4
++			MX8MM_IOMUXC_NAND_CE3_B_USDHC3_DATA6		0x1d4
++			MX8MM_IOMUXC_NAND_CLE_USDHC3_DATA7		0x1d4
++			MX8MM_IOMUXC_NAND_CE1_B_USDHC3_STROBE 		0x194
++		>;
++	};
++
++	pinctrl_usdhc3_200mhz: usdhc3grp200mhz {
++		fsl,pins = <
++			MX8MM_IOMUXC_NAND_WE_B_USDHC3_CLK		0x196
++			MX8MM_IOMUXC_NAND_WP_B_USDHC3_CMD		0x1d6
++			MX8MM_IOMUXC_NAND_DATA04_USDHC3_DATA0		0x1d6
++			MX8MM_IOMUXC_NAND_DATA05_USDHC3_DATA1		0x1d6
++			MX8MM_IOMUXC_NAND_DATA06_USDHC3_DATA2		0x1d6
++			MX8MM_IOMUXC_NAND_DATA07_USDHC3_DATA3		0x1d6
++			MX8MM_IOMUXC_NAND_RE_B_USDHC3_DATA4		0x1d6
++			MX8MM_IOMUXC_NAND_CE2_B_USDHC3_DATA5		0x1d6
++			MX8MM_IOMUXC_NAND_CE3_B_USDHC3_DATA6		0x1d6
++			MX8MM_IOMUXC_NAND_CLE_USDHC3_DATA7		0x1d6
++			MX8MM_IOMUXC_NAND_CE1_B_USDHC3_STROBE 		0x196
++		>;
++	};
++
++	pinctrl_wdog: wdoggrp {
++		fsl,pins = <
++			MX8MM_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B		0xc6
++		>;
++	};
++
++	pinctrl_wifi: wifigrp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD1_DATA5_GPIO2_IO7		0xc1	/* WIFI_3V3_PWR_EN */
++			MX8MM_IOMUXC_SD2_WP_GPIO2_IO20			0x140	/* WIFI_1V8_PWR_EN */
++			MX8MM_IOMUXC_SD1_RESET_B_GPIO2_IO10		0xc1	/* WIFI_REG_ON     */
++		>;
++	};
++
++	pinctrl_bt: btgrp {
++		fsl,pins = <
++			MX8MM_IOMUXC_SD1_DATA4_GPIO2_IO6		0xc1	/* BT_REG_ON       */
++		>;
++	};
++
++	pinctrl_ecspi1: ecspi1grp {
++		fsl,pins = <
++			MX8MM_IOMUXC_ECSPI1_SCLK_ECSPI1_SCLK		0x13
++			MX8MM_IOMUXC_ECSPI1_MOSI_ECSPI1_MOSI		0x13
++			MX8MM_IOMUXC_ECSPI1_MISO_ECSPI1_MISO		0x13
++			MX8MM_IOMUXC_GPIO1_IO14_GPIO1_IO14		0x13
++			MX8MM_IOMUXC_GPIO1_IO00_GPIO1_IO0		0x13
++			MX8MM_IOMUXC_SD2_RESET_B_GPIO2_IO19		0x13
++		>;
++	};
++
++	pinctrl_can: cangrp {
++		fsl,pins = <
++			MX8MM_IOMUXC_GPIO1_IO05_GPIO1_IO5		0x16 	/* CAN INT */
++			MX8MM_IOMUXC_SD2_CD_B_GPIO2_IO12		0x16	/* CAN RX-INT - SOM rev1.3+ only */
++		>;
++	};
++
++	pinctrl_restouch: restouchgrp {
++		fsl,pins = <
++			MX8MM_IOMUXC_GPIO1_IO03_GPIO1_IO3		0x1c0
++		>;
++	};
++};
+diff --git a/include/sound/cam9000.h b/include/sound/cam9000.h
+new file mode 100644
+index 000000000..8494c2d4a
+--- /dev/null
++++ b/include/sound/cam9000.h
+@@ -0,0 +1,40 @@
++/*
++ * Definitions for Cool Audio M9000 ASoC codec driver
++ *
++ * Copyright (c) 2023 MUSIC Tribe
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#ifndef __CAM9000_H
++#define __CAM9000_H
++
++struct cam9000_platform_data {
++	int gpio_nreset;	/* GPIO driving Reset pin, if any */
++	bool amutec_eq_bmutec;	/* flag to enable AMUTEC=BMUTEC */
++
++	/* TODO - needs to be verified on board
++	 * The M9000 requires its LRCLK and MCLK to be stable before its RESET
++	 * line is de-asserted. That also means that clocks cannot be changed
++	 * without putting the chip back into hardware reset, which also requires
++	 * a complete re-initialization of all registers.
++	 *
++	 * One workaround is to assert and de-assert the PDN bit
++	 * in the MISC1 register. This workaround can be enabled with the
++	 * following flag.
++	 *
++	 * Note that this is not needed in case the clocks are stable
++	 * throughout the entire runtime of the codec.
++	 */
++	bool enable_soft_reset;
++};
++
++#endif /* __CAM9000_H */
+diff --git a/include/sound/pcm.h b/include/sound/pcm.h
+index e08bf475d..d1c719ee4 100644
+--- a/include/sound/pcm.h
++++ b/include/sound/pcm.h
+@@ -136,6 +136,7 @@ struct snd_pcm_ops {
+ #define SNDRV_PCM_RATE_8000_384000	(SNDRV_PCM_RATE_8000_192000|\
+ 					 SNDRV_PCM_RATE_352800|\
+ 					 SNDRV_PCM_RATE_384000)
++#define SNDRV_PCM_RATE_32000_192000 (SNDRV_PCM_RATE_32000|SNDRV_PCM_RATE_44100|SNDRV_PCM_RATE_48000|SNDRV_PCM_RATE_64000|SNDRV_PCM_RATE_88200|SNDRV_PCM_RATE_96000|SNDRV_PCM_RATE_176400|SNDRV_PCM_RATE_192000)
+ #define _SNDRV_PCM_FMTBIT(fmt)		(1ULL << (__force int)SNDRV_PCM_FORMAT_##fmt)
+ #define SNDRV_PCM_FMTBIT_S8		_SNDRV_PCM_FMTBIT(S8)
+ #define SNDRV_PCM_FMTBIT_U8		_SNDRV_PCM_FMTBIT(U8)
+diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
+index a78f28ea2..23a0cdbf4 100644
+--- a/sound/soc/codecs/Kconfig
++++ b/sound/soc/codecs/Kconfig
+@@ -1955,4 +1955,15 @@ config SND_SOC_LPASS_TX_MACRO
+ 	select REGMAP_MMIO
+ 	tristate "Qualcomm TX Macro in LPASS(Low Power Audio SubSystem)"
+ 
++config SND_SOC_CAM9000
++	tristate
++
++
++config SND_SOC_CAM9000_I2C
++    tristate "Cool Audio M9000 Audio Codec"
++    depends on I2C
++	select SND_SOC_CAM9000
++	select REGMAP_I2C
++    help
++      Say Y or M if you want to add support for the M9000 Audio Codec.
+ endmenu
+diff --git a/sound/soc/codecs/Makefile b/sound/soc/codecs/Makefile
+index a6adb49e2..3d0370c3d 100644
+--- a/sound/soc/codecs/Makefile
++++ b/sound/soc/codecs/Makefile
+@@ -332,6 +332,9 @@ snd-soc-tas2764-objs := tas2764.o
+ # Mux
+ snd-soc-simple-mux-objs := simple-mux.o
+ 
++snd-soc-cam9000-objs := cam9000.o
++snd-soc-cam9000-i2c-objs := cam9000-i2c.o
++
+ obj-$(CONFIG_SND_SOC_88PM860X)	+= snd-soc-88pm860x.o
+ obj-$(CONFIG_SND_SOC_AB8500_CODEC)	+= snd-soc-ab8500-codec.o
+ obj-$(CONFIG_SND_SOC_AC97_CODEC)	+= snd-soc-ac97.o
+@@ -668,3 +671,6 @@ obj-$(CONFIG_SND_SOC_LPASS_TX_MACRO)	+= snd-soc-lpass-tx-macro.o
+ 
+ # Mux
+ obj-$(CONFIG_SND_SOC_SIMPLE_MUX)	+= snd-soc-simple-mux.o
++
++obj-$(CONFIG_SND_SOC_CAM9000) += cam9000.o
++obj-$(CONFIG_SND_SOC_CAM9000_I2C) += cam9000-i2c.o
+-- 
+2.37.3
+

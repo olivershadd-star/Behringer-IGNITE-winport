@@ -1,0 +1,53 @@
+From 50b5dc21a0de42a3315fe9b779b585320a923be2 Mon Sep 17 00:00:00 2001
+From: Thomas Gleixner <tglx@linutronix.de>
+Date: Thu, 23 Sep 2021 18:54:37 +0200
+Subject: [PATCH 060/171] sched: Make cond_resched_*lock() variants consistent
+ vs. might_sleep()
+
+Commit 3427445afd26 ("sched: Exclude cond_resched() from nested sleep
+test") removed the task state check of __might_sleep() for
+cond_resched_lock() because cond_resched_lock() is not a voluntary
+scheduling point which blocks. It's a preemption point which requires the
+lock holder to release the spin lock.
+
+The same rationale applies to cond_resched_rwlock_read/write(), but those
+were not touched.
+
+Make it consistent and use the non-state checking __might_resched() there
+as well.
+
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Link: https://lore.kernel.org/r/20210923165357.991262778@linutronix.de
+---
+ include/linux/sched.h | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index 3b13fde58de8..edaa6c90b333 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -2070,14 +2070,14 @@ extern int __cond_resched_rwlock_write(rwlock_t *lock);
+ 	__cond_resched_lock(lock);					\
+ })
+ 
+-#define cond_resched_rwlock_read(lock) ({			\
+-	__might_sleep(__FILE__, __LINE__, PREEMPT_LOCK_OFFSET);	\
+-	__cond_resched_rwlock_read(lock);			\
++#define cond_resched_rwlock_read(lock) ({				\
++	__might_resched(__FILE__, __LINE__, PREEMPT_LOCK_OFFSET);	\
++	__cond_resched_rwlock_read(lock);				\
+ })
+ 
+-#define cond_resched_rwlock_write(lock) ({			\
+-	__might_sleep(__FILE__, __LINE__, PREEMPT_LOCK_OFFSET);	\
+-	__cond_resched_rwlock_write(lock);			\
++#define cond_resched_rwlock_write(lock) ({				\
++	__might_resched(__FILE__, __LINE__, PREEMPT_LOCK_OFFSET);	\
++	__cond_resched_rwlock_write(lock);				\
+ })
+ 
+ static inline void cond_resched_rcu(void)
+-- 
+2.37.3
+

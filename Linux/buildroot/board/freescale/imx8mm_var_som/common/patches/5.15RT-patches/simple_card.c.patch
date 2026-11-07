@@ -1,0 +1,26 @@
+diff --git a/sound/soc/generic/simple-card.c b/sound/soc/generic/simple-card.c
+index a894a285077a..c38549531643 100644
+--- a/sound/soc/generic/simple-card.c
++++ b/sound/soc/generic/simple-card.c
+@@ -645,13 +645,15 @@ static int simple_soc_probe(struct snd_soc_card *card)
+ 	int ret;
+ 
+ 	ret = asoc_simple_init_hp(card, &priv->hp_jack, PREFIX);
+-	if (ret < 0)
+-		return ret;
+-
++	if (ret < 0){
++		pr_err("Kick: In simple_soc_probe 1() %s\n", __func__);
++		//return ret;
++	}
+ 	ret = asoc_simple_init_mic(card, &priv->mic_jack, PREFIX);
+-	if (ret < 0)
+-		return ret;
+-
++	if (ret < 0){
++		pr_err("Kick: In simple_soc_probe 1() %s\n", __func__);
++		//return ret;
++	}
+ 	return 0;
+ }
+ 

@@ -1,0 +1,622 @@
+From 50369ff2430cf9ab4d1ba2d662fa7af2ef8b6f76 Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Wed, 13 Sep 2023 18:52:54 +0530
+Subject: [PATCH 2/2] touch changes
+
+Signed-off-by: MUSIC Tribe
+---
+ drivers/input/touchscreen/goodix.c |   9 +-
+ sound/soc/codecs/cam9000-i2c.c     |  55 +++
+ sound/soc/codecs/cam9000.c         | 519 +++++++++++++++++++++++++++++
+ sound/soc/codecs/cam9000.h         |  11 +
+ 4 files changed, 590 insertions(+), 4 deletions(-)
+ create mode 100644 sound/soc/codecs/cam9000-i2c.c
+ create mode 100644 sound/soc/codecs/cam9000.c
+ create mode 100644 sound/soc/codecs/cam9000.h
+
+diff --git a/sound/soc/codecs/cam9000-i2c.c b/sound/soc/codecs/cam9000-i2c.c
+new file mode 100644
+index 000000000..76457b2ec
+--- /dev/null
++++ b/sound/soc/codecs/cam9000-i2c.c
+@@ -0,0 +1,55 @@
++/*
++ * Cool Audio M9000 I2C audio driver
++ *
++ * Copyright (c) 2023 MUSIC Tribe
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <linux/module.h>
++#include <linux/i2c.h>
++#include <linux/regmap.h>
++#include <sound/soc.h>
++#include "cam9000.h"
++
++static int cam9000_i2c_probe(struct i2c_client *client,
++			     const struct i2c_device_id *id)
++{
++	struct regmap_config config;
++	printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++
++	config = cam9000_regmap_config;
++	config.reg_bits = 8;
++	config.val_bits = 8;
++
++	return cam9000_probe(&client->dev,
++			    devm_regmap_init_i2c(client, &config));
++}
++
++static const struct i2c_device_id cam9000_i2c_id[] = {
++	{ "cam9000", 0 },
++	{ }
++};
++MODULE_DEVICE_TABLE(i2c, cam9000_i2c_id);
++
++static struct i2c_driver cam9000_i2c_driver = {
++	.driver = {
++		.name = "cam9000",
++		.of_match_table = of_match_ptr(cam9000_dt_ids),
++	},
++	.probe = cam9000_i2c_probe,
++	.id_table = cam9000_i2c_id,
++};
++module_i2c_driver(cam9000_i2c_driver);
++
++MODULE_DESCRIPTION("ASoC M9000 I2C Driver");
++MODULE_AUTHOR("MUSIC Tribe");
++MODULE_LICENSE("GPL");
+diff --git a/sound/soc/codecs/cam9000.c b/sound/soc/codecs/cam9000.c
+new file mode 100644
+index 000000000..b777a0e64
+--- /dev/null
++++ b/sound/soc/codecs/cam9000.c
+@@ -0,0 +1,519 @@
++/*
++ * Cool Audio M9000 ASoC codec driver
++ *
++ * Copyright (c) 2023 MUSIC Tribe
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * This driver support Cool Audio M9000 codec 
++ * - acting in slave mode, 
++ * - working in control port mode, 
++ * - connected either via I2C.
++ * The data interface format accepted is I2S.
++ * DAPM support not implemented.
++ */
++
++#include <linux/module.h>
++#include <linux/slab.h>
++#include <linux/delay.h>
++#include <linux/gpio.h>
++#include <linux/of.h>
++#include <linux/of_device.h>
++#include <linux/of_gpio.h>
++#include <linux/regulator/consumer.h>
++#include <sound/pcm.h>
++#include <sound/soc.h>
++#include <sound/tlv.h>
++#include <sound/cam9000.h>
++#include "cam9000.h"
++
++/*
++ * Cool Audio M9000 registers & address
++ */
++#define CAM9000_CHIPID	0x01	/* Chip ID */
++#define CAM9000_MODE	0x02	/* Mode Control 1 */
++#define CAM9000_MIXCTL	0x03	/* Mix & Inv Control */
++#define CAM9000_MUTECTL	0x04	/* Mute Control */
++#define CAM9000_VOLA	0x05	/* DAC Channel A Volume Control */
++#define CAM9000_VOLB	0x06	/* DAC Channel B Volume Control */
++#define CAM9000_FILTCTL	0x07	/* ADC Control */
++#define CAM9000_MISC1	0x08	/* Control 1 */
++#define CAM9000_MISC2	0x09	/* Control 2 */
++
++#define CAM9000_LAST_REG_ADDR CAM9000_MISC2
++
++/*
++ * Default M9000 power-up configuration
++ * Array contains non-existing in hw register at address 0
++ * Array do not include Chip ID, as codec driver does not use
++ * registers read operations at all
++ */
++static const struct reg_default cam9000_reg_defaults[] = {
++	{ CAM9000_MODE,		0x00, },
++	{ CAM9000_MIXCTL,	0x09, },
++	{ CAM9000_MUTECTL,	0xC0, },
++	{ CAM9000_VOLA,		0x00, },
++	{ CAM9000_VOLB,		0x00, },
++	{ CAM9000_FILTCTL,	0xB0, },
++	{ CAM9000_MISC1,	0x80, },
++	{ CAM9000_MISC2,	0x08, },
++};
++
++
++static bool cam9000_volatile_reg(struct device *dev, unsigned int reg)
++{
++	return reg == CAM9000_CHIPID;
++}
++
++/* TODO check if required
++static const char * const supply_names[] = {
++	"vd", "vlc", "vref", "va", "vls"
++};
++*/
++struct cam9000_private {
++	unsigned int			mclk;
++	bool				master;
++	bool				deemph;
++	struct regmap			*regmap;
++
++	/* Current sample rate */
++	int				rate;
++	/* GPIO driving Reset pin, if any */
++	int				gpio_nreset;
++	/* enable soft reset workaround */
++	bool				enable_soft_reset;
++
++	//struct regulator_bulk_data      supplies[ARRAY_SIZE(supply_names)];
++};
++
++static const struct snd_soc_dapm_widget cam9000_dapm_widgets[] = {
++SND_SOC_DAPM_OUTPUT("AOUTA+"),
++SND_SOC_DAPM_OUTPUT("AOUTA-"),
++SND_SOC_DAPM_OUTPUT("AOUTB+"),
++SND_SOC_DAPM_OUTPUT("AOUTB-"),
++};
++
++static const struct snd_soc_dapm_route cam9000_dapm_routes[] = {
++	{ "AOUTA+", NULL, "Playback" },
++	{ "AOUTA-", NULL, "Playback" },
++	{ "AOUTB+", NULL, "Playback" },
++	{ "AOUTB-", NULL, "Playback" },
++};
++
++/*
++ * @freq is the desired MCLK rate
++ * MCLK should be the sample rate multiplied by one of the
++ * ratios listed in mclk_fs_ratios table
++ */
++static int cam9000_set_dai_sysclk(struct snd_soc_dai *codec_dai,
++				 int clk_id, unsigned int freq, int dir)
++{
++	struct snd_soc_component *component = codec_dai->component;
++	struct cam9000_private *cam9000 = snd_soc_component_get_drvdata(component);
++	printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++	cam9000->mclk = freq;
++	return 0;
++}
++
++static int cam9000_set_dai_fmt(struct snd_soc_dai *codec_dai,
++			      unsigned int format)
++{
++	struct snd_soc_component *component = codec_dai->component;
++	struct cam9000_private *cam9000 = snd_soc_component_get_drvdata(component);
++	int ret;
++
++	printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++	switch (format & SND_SOC_DAIFMT_FORMAT_MASK) {
++		break;
++	case SND_SOC_DAIFMT_I2S:
++		ret = regmap_update_bits(cam9000->regmap, CAM9000_MODE,
++			0x70, 0x10);
++		if (ret < 0)
++			return ret;
++		break;
++	default:
++		dev_err(component->dev, "Invalid DAI format\n");
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++static int cam9000_hw_params(struct snd_pcm_substream *substream,
++			    struct snd_pcm_hw_params *params,
++			    struct snd_soc_dai *dai)
++{
++	struct snd_soc_component *component = dai->component;
++	struct cam9000_private *cam9000 = snd_soc_component_get_drvdata(component);
++	int ret;
++	unsigned int val;
++
++	printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++	if (cam9000->enable_soft_reset) {
++		/*
++		 * Put the codec in pwr dwn and set the clock div
++		 */
++
++		if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) /*&&
++		     (!dai->capture_active)*/ ) {
++			ret = regmap_update_bits(cam9000->regmap, CAM9000_MISC1,
++						 0x80,
++						 0x80);
++			if (ret < 0)
++				return ret;
++
++			ret = regmap_update_bits(cam9000->regmap, CAM9000_MISC1,
++						 0x80, 0);
++			if (ret < 0)
++				return ret;
++		}
++	}
++
++	cam9000->rate = params_rate(params);
++	/* Configure mode */
++	if (cam9000->rate < 50000)
++		val = 0x00;//single
++	else if (cam9000->rate < 100000)
++		val = 0x01;//double
++	else
++		val = 0x02;//quad
++
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_MODE, 0x03, val);
++
++	//TODO - Depending on sample rate (44.1/48 KHz) set the MCLK divider
++	//ret = regmap_update_bits(cam9000->regmap, CAM9000_MISC1, 0x18, val);
++
++	if (ret < 0)
++		return ret;
++
++	printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++	return 0;
++}
++
++static int cam9000_mute_stream(struct snd_soc_dai *dai, int mute, int stream)
++{
++	struct snd_soc_component *component = dai->component;
++	struct cam9000_private *cam9000 = snd_soc_component_get_drvdata(component);
++	int ret;
++
++	printk(KERN_CRIT " function: %s line:%d mute:%d\n", __FUNCTION__, __LINE__, mute);
++	if (stream != SNDRV_PCM_STREAM_PLAYBACK)
++		return 0;
++
++	if (mute) {
++		printk(KERN_CRIT "MUTING\n"); 
++		ret = regmap_update_bits(cam9000->regmap, CAM9000_MUTECTL,
++				0x18, 0x18);
++		if (ret < 0)
++			return ret;
++	}
++	else {
++		printk(KERN_CRIT "UN-MUTING\n"); 
++		ret = regmap_update_bits(cam9000->regmap, CAM9000_MUTECTL,
++				0x18, 0x00);
++		if (ret < 0)
++			return ret;
++	}
++
++	printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++	return 0;
++}
++
++static DECLARE_TLV_DB_SCALE(cam9000_dac_tlv, -12750, 50, 0);
++static const struct snd_kcontrol_new cam9000_snd_controls[] = {
++	SOC_DOUBLE_R_TLV("Master Playback Volume", CAM9000_VOLA, CAM9000_VOLB,
++		0, 0xFF, 1, cam9000_dac_tlv),
++//TODO add other controls if required
++};
++
++static const struct snd_soc_dai_ops cam9000_dai_ops = {
++	.hw_params	= cam9000_hw_params,
++	.set_sysclk	= cam9000_set_dai_sysclk,
++	.set_fmt	= cam9000_set_dai_fmt,
++	.mute_stream	= cam9000_mute_stream,
++};
++
++static struct snd_soc_dai_driver cam9000_dai = {
++	.name = "cam9000-hifi",
++	.playback = {
++		.stream_name	= "Playback",
++		.channels_min	= 2,
++		.channels_max	= 2,
++		.rates		= SNDRV_PCM_RATE_32000_192000,
++		.formats	= SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE,
++	},
++	.ops = &cam9000_dai_ops,
++};
++
++//Always boot to control port mode
++static int cam9000_reset(struct snd_soc_component *component)
++{
++	int ret;
++	struct cam9000_private *cam9000 = snd_soc_component_get_drvdata(component);
++
++	printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++	if (gpio_is_valid(cam9000->gpio_nreset)) {
++		printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++		gpio_set_value(cam9000->gpio_nreset, 0);
++		mdelay(1);
++		gpio_set_value(cam9000->gpio_nreset, 1);
++		mdelay(1); //TODO check on HW
++	}
++
++	// Enable control port mode
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_MISC1, 0x40, 0x40); 
++	gpio_set_value(cam9000->gpio_nreset, 1);
++
++	printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++	return 0;
++}
++
++static int cam9000_setup(struct snd_soc_component *component)
++{
++	int ret;
++	struct cam9000_private *cam9000 = snd_soc_component_get_drvdata(component);
++
++	printk(KERN_CRIT " function ENTRY: %s line:%d \n", __FUNCTION__, __LINE__);
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_MODE, 0xFF, 0x10); 
++	if (ret < 0)
++		return ret;
++
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_MIXCTL, 0xFF, 0x09); 
++	if (ret < 0)
++		return ret;
++
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_MUTECTL, 0xFB, 0x00); 
++	if (ret < 0)
++		return ret;
++
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_VOLA, 0xFF, 0x00); 
++	if (ret < 0)
++		return ret;
++
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_VOLB, 0xFF, 0x00); 
++	if (ret < 0)
++		return ret;
++
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_FILTCTL, 0xF5, 0x70); 
++	if (ret < 0)
++		return ret;
++
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_MISC1, 0x38, 0x00); 
++	if (ret < 0)
++		return ret;
++
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_MISC2, 0x0F, 0x00); 
++	if (ret < 0)
++		return ret;
++
++	printk(KERN_CRIT " function EXIT : %s line:%d \n", __FUNCTION__, __LINE__);
++	return 0;
++}
++
++#define cam9000_soc_suspend	NULL
++#define cam9000_soc_resume	NULL
++
++const struct of_device_id cam9000_dt_ids[] = {
++	{ .compatible = "coolaudio,cam9000", },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, cam9000_dt_ids);
++EXPORT_SYMBOL_GPL(cam9000_dt_ids);
++
++static int cam9000_component_probe(struct snd_soc_component *component)
++{
++	struct cam9000_private *cam9000 = snd_soc_component_get_drvdata(component);
++	struct cam9000_platform_data *cam9000plat = component->dev->platform_data;
++	int ret;
++	bool amutec_eq_bmutec = false;
++
++	printk(KERN_CRIT "Entry function: %s line:%d \n", __FUNCTION__, __LINE__);
++#ifdef CONFIG_OF
++	if (of_match_device(cam9000_dt_ids, component->dev)) {
++		if (of_get_property(component->dev->of_node,
++				     "coolaudio,amutec-eq-bmutec", NULL))
++			amutec_eq_bmutec = true;
++
++		if (of_get_property(component->dev->of_node,
++				     "coolaudio,enable-soft-reset", NULL))
++			cam9000->enable_soft_reset = true;
++	/*	
++		cam9000->gpio_nreset = of_get_named_gpio(component->dev->of_node, "reset_gpios", 0); 
++		if (!gpio_is_valid(cam9000->gpio_nreset))
++		{
++			printk(KERN_CRIT " function: %s line:%d  ****** gpio invalid \n", __FUNCTION__, __LINE__);
++            return -ENODEV;    
++		}
++		*/
++	}
++#endif
++
++/* TODO check if required
++	ret = regulator_bulk_enable(ARRAY_SIZE(cam9000->supplies),
++				    cam9000->supplies);
++	if (ret < 0) {
++		dev_err(codec->dev, "Failed to enable regulators: %d\n", ret);
++		return ret;
++	}
++*/
++	if (cam9000plat) {
++		amutec_eq_bmutec = cam9000plat->amutec_eq_bmutec;
++		cam9000->enable_soft_reset = cam9000plat->enable_soft_reset;
++	}
++
++	/* Reset codec */
++	cam9000_reset(component);
++
++/*
++	ret = regcache_sync(cam9000->regmap);
++	if (ret < 0)
++		return ret;
++*/
++	//Go to power down mode, (SET PDN) while setting up the registers
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_MISC1, 0x80, 0x80);
++	if (ret < 0)
++		return ret;
++
++	cam9000_setup(component);
++
++	//Power up now (CLEAR PDN)
++	ret = regmap_update_bits(cam9000->regmap, CAM9000_MISC1, 0x80, 0);
++	if (ret < 0)
++		return ret;
++
++	/* Power-up sequence requires 85 uS */
++	udelay(85);
++	printk(KERN_CRIT "Exit function: %s line:%d \n", __FUNCTION__, __LINE__);
++	return 0;
++}
++
++static void cam9000_component_remove(struct snd_soc_component *component)
++{
++	struct cam9000_private *cam9000 = snd_soc_component_get_drvdata(component);
++
++	if (gpio_is_valid(cam9000->gpio_nreset))
++		/* Set codec to the reset state */
++		gpio_set_value(cam9000->gpio_nreset, 0);
++
++/* TODO check if required
++	regcache_mark_dirty(cam9000->regmap);
++	regulator_bulk_disable(ARRAY_SIZE(cam9000->supplies), cam9000->supplies);
++*/
++};
++
++static struct snd_soc_component_driver soc_component_dev_cam9000 = {
++	.probe			= cam9000_component_probe,
++	.remove			= cam9000_component_remove,
++	.suspend		= cam9000_soc_suspend,
++	.resume			= cam9000_soc_resume,
++
++	.controls		= cam9000_snd_controls,
++	.num_controls		= ARRAY_SIZE(cam9000_snd_controls),
++/*
++		.dapm_widgets		= cam9000_dapm_widgets,
++		.num_dapm_widgets	= ARRAY_SIZE(cam9000_dapm_widgets),
++		.dapm_routes		= cam9000_dapm_routes,
++		.num_dapm_routes	= ARRAY_SIZE(cam9000_dapm_routes),
++*/
++	.endianness		= 1,
++	.non_legacy_dai_naming	= 1,
++};
++
++
++static int cam9000_common_probe(struct device *dev,
++			       struct cam9000_private **c)
++{
++	struct cam9000_platform_data *cam9000plat = dev->platform_data;
++	struct cam9000_private *cam9000;
++	int i, ret;
++
++	printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++	cam9000 = devm_kzalloc(dev, sizeof(*cam9000), GFP_KERNEL);
++	if (!cam9000)
++		return -ENOMEM;
++
++	if (of_match_device(cam9000_dt_ids, dev))
++	{
++		cam9000->gpio_nreset =
++			of_get_named_gpio(dev->of_node, "reset-gpios", 0);
++		printk(KERN_CRIT " function: %s line:%d gpio = %x\n", __FUNCTION__, __LINE__, cam9000->gpio_nreset);		
++	}
++
++	/*if (cam9000plat)
++		cam9000->gpio_nreset = cam9000plat->gpio_nreset;*/
++
++	if (gpio_is_valid(cam9000->gpio_nreset)) {
++		int ret;
++
++		printk(KERN_CRIT " function: %s line:%d gpio = %x\n", __FUNCTION__, __LINE__, cam9000->gpio_nreset);	
++		ret = devm_gpio_request(dev, cam9000->gpio_nreset,
++					"codec-Reset");
++		if (ret < 0)
++		{
++			printk(KERN_CRIT " function: %s line:%d gpio = %x\n", __FUNCTION__, __LINE__, cam9000->gpio_nreset);	
++			return ret;
++		}
++			
++	}
++	else
++		printk(KERN_CRIT " function: %s line:%d gpio = %x\n", __FUNCTION__, __LINE__, cam9000->gpio_nreset);	
++/* TODo - check if required
++	for (i = 0; i < ARRAY_SIZE(supply_names); i++)
++		cam9000->supplies[i].supply = supply_names[i];
++
++	ret = devm_regulator_bulk_get(dev, ARRAY_SIZE(cam9000->supplies),
++					cam9000->supplies);
++
++	if (ret < 0) {
++		dev_err(dev, "Failed to get regulators: %d\n", ret);
++		return ret;
++	}
++*/
++	*c = cam9000;
++	printk(KERN_CRIT " function: %s line:%d \n", __FUNCTION__, __LINE__);
++	return 0;
++}
++
++const struct regmap_config cam9000_regmap_config = {
++	.max_register = CAM9000_LAST_REG_ADDR,
++
++	.reg_defaults = cam9000_reg_defaults,
++	.num_reg_defaults = ARRAY_SIZE(cam9000_reg_defaults),
++	.cache_type = REGCACHE_RBTREE,
++
++	.volatile_reg = cam9000_volatile_reg,
++};
++
++EXPORT_SYMBOL_GPL(cam9000_regmap_config);
++
++int cam9000_probe(struct device *dev, struct regmap *regmap)
++{
++	struct cam9000_private *cam9000;
++	int ret;
++
++	if (IS_ERR(regmap))
++		return PTR_ERR(regmap);
++
++	ret = cam9000_common_probe(dev, &cam9000);
++	if (ret < 0)
++		return ret;
++
++	dev_set_drvdata(dev, cam9000);
++	cam9000->regmap = regmap;
++
++	printk(KERN_CRIT "m9000 Calling snd_soc_register_component() \n"); 
++	return snd_soc_register_component(dev, &soc_component_dev_cam9000, &cam9000_dai, 1);
++}
++EXPORT_SYMBOL_GPL(cam9000_probe);
++
++MODULE_AUTHOR("MUSIC Tribe");
++MODULE_DESCRIPTION("Cool Audio M9000 ALSA SoC Codec Driver");
++MODULE_LICENSE("GPL");
+diff --git a/sound/soc/codecs/cam9000.h b/sound/soc/codecs/cam9000.h
+new file mode 100644
+index 000000000..39dc61325
+--- /dev/null
++++ b/sound/soc/codecs/cam9000.h
+@@ -0,0 +1,11 @@
++#ifndef _CAM9000_PRIV_H
++#define _CAM9000_PRIV_H
++
++#include <linux/regmap.h>
++
++extern const struct of_device_id cam9000_dt_ids[];
++extern const struct regmap_config cam9000_regmap_config;
++
++int cam9000_probe(struct device *dev, struct regmap *regmap);
++
++#endif
+-- 
+2.37.3
+

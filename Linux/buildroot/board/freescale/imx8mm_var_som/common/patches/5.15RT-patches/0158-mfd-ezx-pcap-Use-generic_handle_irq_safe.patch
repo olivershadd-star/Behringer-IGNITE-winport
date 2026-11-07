@@ -1,0 +1,39 @@
+From abc9d9d59825b94095d612f24b3e1899243c4b08 Mon Sep 17 00:00:00 2001
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Date: Fri, 11 Feb 2022 19:14:58 +0100
+Subject: [PATCH 158/171] mfd: ezx-pcap: Use generic_handle_irq_safe().
+
+Instead of manually disabling interrupts before invoking use
+generic_handle_irq_safe() which can be invoked with enabled and disabled
+interrupts.
+
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Link: https://lore.kernel.org/r/20220211181500.1856198-6-bigeasy@linutronix.de
+(cherry picked from commit a6efcd21ca31ee59e2daf22ec847e25c334b107f)
+Signed-off-by: Clark Williams <williams@redhat.com>
+---
+ drivers/mfd/ezx-pcap.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/drivers/mfd/ezx-pcap.c b/drivers/mfd/ezx-pcap.c
+index 70fa18b04ad2..b14d3f98e1eb 100644
+--- a/drivers/mfd/ezx-pcap.c
++++ b/drivers/mfd/ezx-pcap.c
+@@ -193,13 +193,11 @@ static void pcap_isr_work(struct work_struct *work)
+ 		ezx_pcap_write(pcap, PCAP_REG_MSR, isr | msr);
+ 		ezx_pcap_write(pcap, PCAP_REG_ISR, isr);
+ 
+-		local_irq_disable();
+ 		service = isr & ~msr;
+ 		for (irq = pcap->irq_base; service; service >>= 1, irq++) {
+ 			if (service & 1)
+-				generic_handle_irq(irq);
++				generic_handle_irq_safe(irq);
+ 		}
+-		local_irq_enable();
+ 		ezx_pcap_write(pcap, PCAP_REG_MSR, pcap->msr);
+ 	} while (gpio_get_value(pdata->gpio));
+ }
+-- 
+2.37.3
+

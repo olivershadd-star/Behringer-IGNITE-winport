@@ -1,0 +1,12 @@
+[Unit]
+Description=Mount app partition
+Before=ignite.service
+
+[Service]
+Type=simple
+ExecStart=/bin/sh /usr/bin/ignite_partitions_mount.sh
+StandardInput=journal
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

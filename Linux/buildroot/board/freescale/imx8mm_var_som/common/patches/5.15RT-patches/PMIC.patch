@@ -1,0 +1,39 @@
+diff --git a/drivers/mfd/rohm-bd718x7.c b/drivers/mfd/rohm-bd718x7.c
+index bfd81f78beae..23679dc19cfb 100644
+--- a/drivers/mfd/rohm-bd718x7.c
++++ b/drivers/mfd/rohm-bd718x7.c
+@@ -19,7 +19,7 @@
+ #include <linux/types.h>
+ 
+ static struct gpio_keys_button button = {
+-	.code = KEY_POWER,
++	.code = KEY_STOP,
+ 	.gpio = -1,
+ 	.type = EV_KEY,
+ };
+@@ -98,6 +98,7 @@ static int bd718xx_init_press_duration(struct regmap *regmap,
+ 	u32 short_press_value, long_press_value;
+ 	int ret;
+ 
++#if 0
+ 	ret = of_property_read_u32(dev->of_node, "rohm,short-press-ms",
+ 				   &short_press_ms);
+ 	if (!ret) {
+@@ -124,6 +125,8 @@ static int bd718xx_init_press_duration(struct regmap *regmap,
+ 		}
+ 	}
+ 
++#endif
++
+ 	return 0;
+ }
+ 
+@@ -164,7 +167,7 @@ static int bd718xx_i2c_probe(struct i2c_client *i2c,
+ 	}
+ 
+ 	ret = devm_regmap_add_irq_chip(&i2c->dev, regmap, i2c->irq,
+-				       IRQF_ONESHOT, 0, &bd718xx_irq_chip,
++				       IRQF_IRQPOLL, 0, &bd718xx_irq_chip,
+ 				       &irq_data);
+ 	if (ret) {
+ 		dev_err(&i2c->dev, "Failed to add irq_chip\n");

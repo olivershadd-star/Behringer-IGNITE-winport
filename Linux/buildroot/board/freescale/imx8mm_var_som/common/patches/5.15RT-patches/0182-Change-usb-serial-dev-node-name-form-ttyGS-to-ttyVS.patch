@@ -1,0 +1,31 @@
+From 608f7a3188fc0bc24062562af6a48fc94929bf81 Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Tue, 5 Mar 2024 19:49:15 +0530
+Subject: [PATCH] Change usb serial dev node name form ttyGS to ttyVS
+
+in linux if tty term is not set then it takes the first
+serial port, in this case it was sending logs to ttyGS0
+instead of ttymxc0. which is causing issue to mcu-imx
+communication.
+
+Signed-off-by: MUSIC Tribe
+---
+ drivers/usb/gadget/function/u_serial.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/usb/gadget/function/u_serial.c b/drivers/usb/gadget/function/u_serial.c
+index 6f68cbeee..da8258fc5 100644
+--- a/drivers/usb/gadget/function/u_serial.c
++++ b/drivers/usb/gadget/function/u_serial.c
+@@ -1455,7 +1455,7 @@ static int userial_init(void)
+ 		return PTR_ERR(driver);
+ 
+ 	driver->driver_name = "g_serial";
+-	driver->name = "ttyGS";
++	driver->name = "ttyVS";
+ 	/* uses dynamically assigned dev_t values */
+ 
+ 	driver->type = TTY_DRIVER_TYPE_SERIAL;
+-- 
+2.17.1
+

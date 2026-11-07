@@ -1,0 +1,20 @@
+From 92df262221081e9693a21d5790cf57a66e0c69df Mon Sep 17 00:00:00 2001
+From: Clark Williams <clrkwllms@kernel.org>
+Date: Sun, 25 Sep 2022 19:27:23 -0500
+Subject: [PATCH 171/171] 'Linux 5.15.70-rt50 REBASE'
+
+Signed-off-by: Clark Williams <clrkwllms@kernel.org>
+---
+ localversion-rt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-rt b/localversion-rt
+index 4b7dca68a5b4..42c384668389 100644
+--- a/localversion-rt
++++ b/localversion-rt
+@@ -1 +1 @@
+--rt49
++-rt50
+-- 
+2.37.3
+

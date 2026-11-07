@@ -1,0 +1,13 @@
+# Buildroot downloads and build output
+/Linux/buildroot/dl/
+/Linux/buildroot/output/
+
+# Cross-compilation SDK and CMake build directories
+/Source/SDK/
+build/
+build-*/
+cmake-build-*/
+.build_cache/
+
+# Editor settings
+.vscode/

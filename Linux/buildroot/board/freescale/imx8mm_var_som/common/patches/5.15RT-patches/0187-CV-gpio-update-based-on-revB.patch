@@ -1,0 +1,212 @@
+From 6f354b82645697f51b8f3d08e61c9d33d1238207 Mon Sep 17 00:00:00 2001
+From: MUSIC Tribe
+Date: Thu, 1 Aug 2024 10:39:33 +0530
+Subject: [PATCH] CV gpio update based on revB
+
+Signed-off-by: MUSIC Tribe
+---
+ .../dts/freescale/imx8mm-var-som-ignite.dts   | 72 +------------------
+ .../dts/freescale/imx8mm-var-som-ignite.dtsi  |  4 +-
+ drivers/misc/cvctl.c                          | 28 ++++++--
+ 3 files changed, 28 insertions(+), 76 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dts b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dts
+index e21c86095..53a06afb0 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dts
++++ b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dts
+@@ -148,35 +148,6 @@
+ 	};
+ */
+ 
+-	ov5640_mipi1: ov5640_mipi1@3c {
+-		compatible = "ovti,ov5640_mipi";
+-		reg = <0x3c>;
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&pinctrl_csi1>;
+-		clocks = <&clk IMX8MM_CLK_CLKO1>;
+-		clock-names = "csi_mclk";
+-/* Disabled CLKO2, since VAR-SOM-MX8M-MINI camera expansion board uses
+- * its own oscillator. Enable CLK02 if your design requires it
+- */
+-#if 0
+-		assigned-clocks = <&clk IMX8MM_CLK_CLKO1>;
+-		assigned-clock-parents = <&clk IMX8MM_CLK_24M>;
+-		assigned-clock-rates = <24000000>;
+-#endif
+-		csi_id = <0>;
+-		pwn-gpios = <&gpio5 12 GPIO_ACTIVE_HIGH>;
+-		rst-gpios = <&gpio1 13 GPIO_ACTIVE_LOW>;
+-		mclk = <24000000>;
+-		mclk_source = <0>;
+-		status = "okay";
+-
+-		port {
+-			ov5640_mipi1_ep: endpoint {
+-				remote-endpoint = <&mipi1_sensor_ep>;
+-			};
+-		};
+-	};
+-
+ 	/* GPIO expander */
+ 	pca9534: gpio@20 {
+ 		compatible = "nxp,pca9534";
+@@ -217,10 +188,7 @@
+ 			line-name = "enet_sel";
+ 		};
+ 	};
+-	ad5696@c {
+-                    compatible = "ad5671r";
+-                    reg = <0xc>;
+-        };
++
+ };
+ 
+ &i2c3 {
+@@ -273,30 +241,12 @@
+ 	#size-cells = <0>;
+ 	status = "okay";
+ 
+-	port {
+-		mipi1_sensor_ep: endpoint@1 {
+-			remote-endpoint = <&ov5640_mipi1_ep>;
+-			data-lanes = <2>;
+-			csis-hs-settle = <13>;
+-			csis-clk-settle = <2>;
+-			csis-wclk;
+-		};
+-
+-		csi1_mipi_ep: endpoint@2 {
+-			remote-endpoint = <&csi1_ep>;
+-		};
+-	};
+ };
+ 
+ &csi1_bridge {
+ 	fsl,mipi-mode;
+ 	status = "okay";
+ 
+-	port {
+-		csi1_ep: endpoint {
+-			remote-endpoint = <&csi1_mipi_ep>;
+-		};
+-	};
+ };
+ 
+ &panel_lvds {
+@@ -442,15 +392,6 @@
+ 	status = "okay";
+ };
+ 
+-&gpio4 {
+-	cam_buf_hog {
+-		gpio-hog;
+-		gpios = <5 GPIO_ACTIVE_HIGH>;
+-		output-low;
+-		line-name = "cam_buf_en";
+-	};
+-};
+-
+ &snvs_pwrkey {
+ 	status = "okay";
+ };
+@@ -514,6 +455,7 @@
+ 	pinctrl_gpio_reset: gpioreset {
+ 		fsl,pins = <
+ 			MX8MM_IOMUXC_SAI2_TXFS_GPIO4_IO24		0x41
++			MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1			0x149
+ 		>;
+ 	};
+ 
+@@ -532,7 +474,7 @@
+ 
+ 	pinctrl_reg_usdhc2_vmmc: regusdhc2vmmc {
+ 		fsl,pins = <
+-			MX8MM_IOMUXC_SAI1_RXC_SAI1_RX_BCLK		0x41
++/*			MX8MM_IOMUXC_SAI1_RXC_SAI1_RX_BCLK		0x41 */
+ 			/*MX8MM_IOMUXC_SAI2_RXC_GPIO4_IO22		0x41*/
+ 		>;
+ 	};
+@@ -609,14 +551,6 @@
+ 		>;
+ 	};
+ 
+-	pinctrl_csi1: csi1grp {
+-		fsl,pins = <
+-			MX8MM_IOMUXC_GPIO1_IO13_GPIO1_IO13		0x19 /* CAM_RST */
+-			MX8MM_IOMUXC_ECSPI2_MISO_GPIO5_IO12		0x19 /* CAM_PWR */
+-			MX8MM_IOMUXC_SAI1_RXD3_GPIO4_IO5		0x19 /* CAM_BUF */
+-		>;
+-	};
+-
+ 	pinctrl_pca9534: pca9534grp {
+ 		fsl,pins = <
+ 			MX8MM_IOMUXC_GPIO1_IO07_GPIO1_IO7		0x16
+diff --git a/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
+index f9b76c2bb..4ebf5f1f2 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx8mm-var-som-ignite.dtsi
+@@ -338,9 +338,9 @@
+ 	status = "okay";
+ 
+ 
+-	gt911: touchscreen@14 {									/*changing from 0x14 to 0x5D*/
++	gt911: touchscreen@5D {									/*changing from 0x14 to 0x5D*/
+ 			compatible = "goodix,gt911";
+-			reg = <0x14>;
++			reg = <0x5d>;
+ 			pinctrl-names = "default";
+ 			pinctrl-0 = <&pinctrl_gt911_ts_gpio>;  			/* Custom pinctrl group node */
+ 
+diff --git a/drivers/misc/cvctl.c b/drivers/misc/cvctl.c
+index 2389586e0..64960145e 100644
+--- a/drivers/misc/cvctl.c
++++ b/drivers/misc/cvctl.c
+@@ -1,9 +1,9 @@
+ #include "cvctl.h"
+ 
+-#define CV_MUX_S0_GPIO 117
+-#define CV_MUX_S1_GPIO 97
+-#define CV_MUXA_EN_GPIO 98
+-#define CV_MUXB_EN_GPIO 99
++#define CV_MUX_S0_GPIO 116
++#define CV_MUX_S1_GPIO 96
++#define CV_MUXA_EN_GPIO 97
++#define CV_MUXB_EN_GPIO 98
+ 
+ #define CV_CHANNEL_1_5 (1 << 0)	// Channel 1 & 5 represented by bit 0, S0
+ #define CV_CHANNEL_2_6 (1 << 1)	// Channel 2 & 6 represented by bit 1, S1
+@@ -15,12 +15,30 @@ static int gpio_state = 0;
+ static void
+ cvctl_set_channel (int state, int channel_num)
+ {
+-  state ? (gpio_state |= (1 << channel_num)) : (gpio_state &=
++  printk (KERN_INFO "set channem %d: state %d:\n", channel_num, state);
++  /*state ? (gpio_state |= (1 << channel_num)) : (gpio_state &=
+ 						~(1 << (channel_num)));
+   gpio_set_value (CV_MUX_S0_GPIO, CV_CHANNEL_1_5 | gpio_state);
+   gpio_set_value (CV_MUX_S1_GPIO, CV_CHANNEL_2_6 | gpio_state);
+   gpio_set_value (CV_MUXB_EN_GPIO, CV_CHANNEL_3_7 | gpio_state);
+   gpio_set_value (CV_MUXA_EN_GPIO, CV_CHANNEL_4_8 | gpio_state);
++
++  */
++  switch(channel_num)
++  {
++	  case 1:
++		  gpio_set_value (CV_MUX_S0_GPIO, state);
++		  break;
++	  case 2:
++		  gpio_set_value (CV_MUX_S1_GPIO, state);
++		  break;
++	  case 3:
++		  gpio_set_value (CV_MUXA_EN_GPIO, state);
++		  break;
++	  case 4:
++		  gpio_set_value (CV_MUXB_EN_GPIO, state);
++		  break;
++  }
+ }
+ 
+ static long
+-- 
+2.17.1
+

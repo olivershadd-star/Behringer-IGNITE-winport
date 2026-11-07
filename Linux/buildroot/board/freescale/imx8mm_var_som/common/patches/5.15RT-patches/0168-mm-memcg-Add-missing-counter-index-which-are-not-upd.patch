@@ -1,0 +1,48 @@
+From 2f4ea6e2a4ae93f5394d795820894f6265718f8e Mon Sep 17 00:00:00 2001
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Date: Mon, 8 Aug 2022 14:55:59 +0200
+Subject: [PATCH 168/171] mm/memcg: Add missing counter index which are not
+ update in interrupt.
+
+Shakeel Butt reported that I missed a few counters which are not updated
+in-interrupt context and therefore disabling preemption is fine.
+
+Please fold into:
+     "Protect per-CPU counter by disabling preemption on PREEMPT_RT"
+
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+[do: backported to v5.15]
+Signed-off-by: David Oberhollenzer <goliath@infraroot.at>
+Signed-off-by: Clark Williams <williams@redhat.com>
+Signed-off-by: Clark Williams <clrkwllms@kernel.org>
+---
+ mm/memcontrol.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/mm/memcontrol.c b/mm/memcontrol.c
+index 4b5888bf0a60..50d2d5432018 100644
+--- a/mm/memcontrol.c
++++ b/mm/memcontrol.c
+@@ -774,10 +774,17 @@ void __mod_memcg_lruvec_state(struct lruvec *lruvec, enum node_stat_item idx,
+ 	 */
+ 	__memcg_stats_lock();
+ 	if (IS_ENABLED(CONFIG_DEBUG_VM)) {
+-		if (idx == NR_ANON_MAPPED || idx == NR_FILE_MAPPED)
++		switch (idx) {
++		case NR_ANON_MAPPED:
++		case NR_FILE_MAPPED:
++		case NR_ANON_THPS:
++		case NR_SHMEM_PMDMAPPED:
++		case NR_FILE_PMDMAPPED:
+ 			WARN_ON_ONCE(!in_task());
+-		else
++			break;
++		default:
+ 			WARN_ON_ONCE(!irqs_disabled());
++		}
+ 	}
+ 
+ 	/* Update memcg */
+-- 
+2.37.3
+
