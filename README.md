@@ -2,7 +2,7 @@
 
 La compilation Windows est validee par [GitHub Actions](https://github.com/olivershadd-star/Bhringer-IGNITE/actions/runs/42388196042).
 
-[Telecharger le paquet Windows](https://github.com/olivershadd-star/Bhringer-IGNITE/actions/runs/42388196042/artifacts/13580353159). Extraire les deux ZIP si necessaire, puis lancer `Ignite.exe` en conservant `assets/` a cote. Fournir sa propre banque `Ignite.sf2` pour les sons internes.
+[Telecharger le paquet Windows](https://github.com/olivershadd-star/Bhringer-IGNITE/releases/download/v0.3.3-windows-alpha.1/Ignite-Windows-x64.zip). Extraire une seule fois le ZIP, puis lancer `Ignite.exe` en conservant `assets/` a cote. Fournir sa propre banque `Ignite.sf2` pour les sons internes.
 
 Version de developpement : fonctionnement interactif, audio et MIDI encore a tester sur PC Windows. Voir [le guide Windows](WINDOWS-FR.md). Documentation amont conservee ci-dessous.
 

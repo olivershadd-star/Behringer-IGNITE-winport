@@ -13,7 +13,7 @@ Depuis PowerShell, dans ce dossier :
 ./build-windows.ps1 -SoundFont 'D:\Samples\MaBanque.sf2'
 ```
 
-Le resultat attendu est `dist/Ignite-Windows-x64/Ignite.exe` avec `assets/` a ses cotes. L'archive portable est dans `dist/`. En cas de nouvelle construction, renommer le dossier et le ZIP precedents. Le workflow `.github/workflows/windows-desktop.yml` permet la meme compilation sur GitHub Actions ; il a ete execute avec succes sur GitHub Actions.
+Le resultat attendu est `dist/Ignite-Windows-x64/Ignite.exe` avec `assets/` a ses cotes. L'archive portable est dans `dist/`. Elle contient directement `Ignite.exe` et `assets/` : une seule extraction suffit. Le telechargement Actions emballe directement les fichiers, sans ZIP intermediaire. En cas de nouvelle construction, renommer le dossier et le ZIP precedents. Le workflow `.github/workflows/windows-desktop.yml` permet la meme compilation sur GitHub Actions ; il a ete execute avec succes sur GitHub Actions.
 
 ## Sons et donnees
 

@@ -21,5 +21,5 @@ New-Item -ItemType Directory -Force $dist | Out-Null
 Copy-Item (Join-Path $binaryDir "*") $dist -Recurse
 Copy-Item (Join-Path $projectRoot "LICENSE") $dist
 Copy-Item (Join-Path $projectRoot "WINDOWS-FR.md") $dist
-Compress-Archive -Path $dist -DestinationPath (Join-Path $projectRoot "dist/Ignite-Windows-x64.zip")
+Compress-Archive -Path (Join-Path $dist "*") -DestinationPath (Join-Path $projectRoot "dist/Ignite-Windows-x64.zip")
 Write-Host "Application : $dist/Ignite.exe"
