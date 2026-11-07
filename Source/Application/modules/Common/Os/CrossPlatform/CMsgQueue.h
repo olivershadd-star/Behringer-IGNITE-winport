@@ -24,24 +24,17 @@ namespace Ignite
 			CMsgQueue (CMsgQueue&&) = delete;
 			CMsgQueue& operator= (CMsgQueue&&) = delete;
 
-			bool put(const T& msg, TimeOut timeoutTicks = TimeOut::kWaitForever)
-			{
-				if (_queue.size() == _size && timeoutTicks == TimeOut::kNoWait)
-				{
-					return false;
-				}
-
-				while (_queue.size() >= _size)
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(5));
-				}
-				std::unique_lock<std::mutex> mlock(_mutex);
-				_queue.push(msg);
-				mlock.unlock();
-				_cond.notify_one();
-
-				return true;
-			}
+            bool put(const T& msg, TimeOut timeoutTicks = TimeOut::kWaitForever)
+            {
+                std::unique_lock<std::mutex> lock(_mutex);
+                if (timeoutTicks == TimeOut::kNoWait && _queue.size() >= _size)
+                    return false;
+                _cond.wait(lock, [this] { return _queue.size() < _size; });
+                _queue.push(msg);
+                lock.unlock();
+                _cond.notify_all();
+                return true;
+            }
 
 			bool get (T& msg, TimeOut timeoutTicks)
 			{
@@ -52,28 +45,35 @@ namespace Ignite
 				}
 				msg = _queue.front();
 				_queue.pop();
+                mlock.unlock();
+                _cond.notify_all();
 				return true;
 			}
 
 			bool reset (void)
 			{
-				std::queue<T> empty;
+				std::unique_lock<std::mutex> lock(_mutex);
+                std::queue<T> empty;
 				std::swap(_queue, empty);
+                _cond.notify_all();
 				return true;
 			}
 
 			bool isEmpty (void)
 			{
-				return _queue.empty();
+				std::lock_guard<std::mutex> lock(_mutex);
+                return _queue.empty();
 			}
 
 			bool isFull (void) { return (numVacant() == 0); }
 
 			uint32_t getSize (void) { return _size; }
 
-			uint32_t numQueued (void) { return static_cast<uint32_t>(_queue.size()); }
+			uint32_t numQueued (void) { std::lock_guard<std::mutex> lock(_mutex);
+                return static_cast<uint32_t>(_queue.size()); }
 
-			uint32_t numVacant (void) { return static_cast<uint32_t>(_size - _queue.size()); }
+			uint32_t numVacant (void) { std::lock_guard<std::mutex> lock(_mutex);
+                return static_cast<uint32_t>(_size - _queue.size()); }
 
 		private:
 			std::queue<T> _queue;

@@ -15,6 +15,18 @@ jobs:
       - name: Compile and package
         shell: pwsh
         run: ./build-windows.ps1
+      - name: Launch desktop and capture its virtual front panel
+        shell: pwsh
+        run: |
+          $app = Start-Process -FilePath ./dist/Ignite-Windows-x64/Ignite.exe -ArgumentList '--desktop-smoke' -WorkingDirectory $PWD -PassThru
+          if (-not $app.WaitForExit(45000)) { Stop-Process -Id $app.Id -Force; throw 'Desktop startup timed out' }
+          if ($app.ExitCode -ne 0) { throw "Desktop startup failed: $($app.ExitCode)" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Desktop-screenshot
+          path: desktop-smoke.png
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: Ignite-Windows-x64

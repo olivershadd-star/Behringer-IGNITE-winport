@@ -1755,6 +1755,7 @@ void FrontPannelManager::onParameterChange(moduleId_t moduleSrc, ParameterBase* 
 void FrontPannelManager::ParamHandler(moduleId_t moduleSrc, ParameterBase* param, bool SendNotification)
 {
 	paramId_t paramId = param->GetParamID();
+    if (paramId < 256) desktopLeds[paramId].store(param->getValue().get<uint8_t>());
 	uint8_t inPlace = 0xFF;
 #ifdef FP_TEST_KEYBRD
 	if (initDone && _toggleButtonArray[0] != nullptr)
@@ -2829,4 +2830,16 @@ DeviceInfo FrontPannelManager::fillDeviceStatusInfo()
 		memcpy(info.usbStorageStatus.availableSpace, "Not Connected", sizeof(info.usbStorageStatus.availableSpace));
 	}
 	return info;
+}
+
+// Events from the virtual Windows front panel follow the device's MCU path.
+bool FrontPannelManager::desktopKey(paramId_t id, uint8_t value)
+{
+    SysMessage message{};
+    message.Header = SYS_KEY_MSG;
+    message.Direction = DIRECTION_IN;
+    message.Id = id;
+    message.size = 1;
+    message.Data[0] = value;
+    return FrontPanneExternalReadQ.put(message, TimeOut::kNoWait);
 }

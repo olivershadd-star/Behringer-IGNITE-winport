@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <array>
 #include <fstream> 
 #include <stdint.h>
 #include <string>
@@ -23,7 +24,7 @@
 
 #ifdef _WIN64
 #if defined(IGNITE_DESKTOP)
-#define FP_TEST_KEYBRD
+// Desktop controls are hosted by DesktopPanel, not the diagnostic simulator.
 #endif
 //#define FP_REMOTE_CLIENT_RECIVE_WIN // Recive from script or device based on IP
 #elif __APPLE__
@@ -72,6 +73,10 @@ namespace Ignite
 	class FrontPannelManager : public Module, public ISyncListener, public juce::Component, private Timer, public juce::Thread
 	{
 	public:
+        // Uses the same internal queue and MCU event dispatcher as the device.
+        bool desktopKey(paramId_t id, uint8_t value);
+        uint8_t desktopLed(unsigned id) const { return id < 256 ? desktopLeds[id].load() : 0; }
+        std::array<std::atomic<uint8_t>, 256> desktopLeds{};
 		FrontPannelManager(IParamChangeListener* listener, IgniteEngine& model);
 		FrontPannelManager(const FrontPannelManager&) = default;
 		FrontPannelManager& operator= (const FrontPannelManager&) = delete;

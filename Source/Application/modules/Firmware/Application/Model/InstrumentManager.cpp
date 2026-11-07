@@ -1132,7 +1132,12 @@ std::string InstrumentManager::addInstrument (void)
 	modifyInstrumentNameIfDuplicate (name);
 	Instrument tempInstrument = Instrument (numberOfInstruments - 1, name, port, chan, this);
 
-	//add in instrument manager list
+	#if defined(IGNITE_DESKTOP)
+    tempInstrument.setInternalSound(true);
+    tempInstrument.setMidiChannel(0);
+    tempInstrument.setInternalSoundPgm(0);
+#endif
+    //add in instrument manager list
 	instrumentList.push_back (tempInstrument);
 
 	//save in filesystem

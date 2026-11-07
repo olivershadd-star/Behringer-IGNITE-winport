@@ -1,3 +1,1 @@
-The General MIDI SoundFont used by IGNITE (`Ignite.sf2`) is not part of this open-source release.
-Put a `.sf2` file you have the rights to here as `Ignite.sf2`; the build copies it next to the
-application, and the device image installs it as `/app/Ignite.sf2`.
+Windows development build: Ignite.sf2 is GeneralUser GS v2.0.3 by S. Christian Collins, supplied under the included GeneralUser-GS-LICENSE.txt. It replaces the unavailable factory bank; it does not reproduce the factory sound set exactly. Source revision: https://github.com/mrbumpy409/GeneralUser-GS/tree/684543d5e5efaef08d02be50dcda8d552478fa60

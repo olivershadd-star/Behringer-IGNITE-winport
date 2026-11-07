@@ -110,6 +110,7 @@ target_link_libraries(${TargetName}
         #juce::juce_audio_formats
         juce::juce_audio_devices
         juce::juce_dsp
+        juce::juce_audio_utils
         common_defs
         common_ui_controls
         ignite_ui
@@ -167,4 +168,9 @@ if(EXISTS "${IGNITE_SOUNDFONT}")
 endif()
 if(WIN32)
     target_link_libraries(${TargetName} PRIVATE winmm ws2_32)
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/sf/GeneralUser-GS-LICENSE.txt")
+    add_custom_command(TARGET ${TargetName} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/sf/GeneralUser-GS-LICENSE.txt" "$<TARGET_FILE_DIR:${TargetName}>/GeneralUser-GS-LICENSE.txt")
 endif()

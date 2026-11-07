@@ -85,7 +85,7 @@ EngineFileHandler::EngineFileHandler(IgniteEngine& model) :engine(model)
 	{
 		mountDataPart(false);
 		fs::create_directory(calib_root_path);
-		engine.fileHandler->UpdateCalibData(&newCalibData);
+		UpdateCalibData(&newCalibData);
 		mountDataPart(true);
 	}
 	GetSystemStatus();//Read and update the data

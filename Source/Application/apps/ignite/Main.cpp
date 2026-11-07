@@ -25,12 +25,16 @@
    ==============================================================================
  */
 #include <JuceHeader.h>
+#include <cstdlib>
 
 using namespace Ignite;
 using namespace Ignite::Midi;
 std::unique_ptr<IListener> _PUiInterface;
 std::unique_ptr<IDevice> _PUiVirtualEngine;
 extern IDevice* EngineInit(void);
+#if defined(IGNITE_DESKTOP)
+#include "DesktopPanel.h"
+#endif
 
 //==============================================================================
 #define SHOW_BOOT_IMAGE
@@ -119,6 +123,19 @@ public:
 		engineThread.join();
 		mainWindow.reset(new MainWindow(getApplicationName()));
 #endif//SHOW_BOOT_IMAGE
+#if defined(IGNITE_DESKTOP)
+        if (commandLine.contains("--desktop-smoke"))
+            juce::Timer::callAfterDelay(10000, [this] {
+                auto image = mainWindow->getContentComponent()->createComponentSnapshot(mainWindow->getContentComponent()->getLocalBounds());
+                auto stream = juce::File::getCurrentWorkingDirectory().getChildFile("desktop-smoke.png").createOutputStream();
+                bool ok = stream && juce::PNGImageFormat().writeImageToStream(image, *stream);
+                stream.reset();
+                auto* model = static_cast<IgniteEngine*>(_PUiVirtualEngine.get());
+                ok = ok && model->songManager->get_tsf_instance() != nullptr;
+                // Test-only exit: the embedded upstream engine has detached perpetual threads.
+                std::_Exit(ok ? 0 : 2);
+            });
+#endif
 	}
 
 	void shutdown() override
@@ -157,18 +174,29 @@ public:
 				juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId),
 				DocumentWindow::allButtons)
 		{
-			setContentOwned(&ui::getAppHome(), true);
+			#if defined(IGNITE_DESKTOP)
+            setContentOwned(new DesktopPanel(*static_cast<IgniteEngine*>(_PUiVirtualEngine.get())), true);
+#else
+            setContentOwned(&ui::getAppHome(), true);
+#endif
 			#if defined(IGNITE_DESKTOP)
 			setUsingNativeTitleBar(true);
 #else
 			setUsingNativeTitleBar(false);
 			setTitleBarHeight(0);
 #endif
-			setContentComponentSize(ui::layout::screen.getWidth(), ui::layout::screen.getHeight());
+			#if defined(IGNITE_DESKTOP)
+            setContentComponentSize(1220, 900);
+            setResizeLimits(854, 630, 1830, 1350);
+            getConstrainer()->setFixedAspectRatio(1220.0 / 900.0);
+            centreWithSize(1220, 900);
+#else
+            setContentComponentSize(ui::layout::screen.getWidth(), ui::layout::screen.getHeight());
+#endif
 #if (JUCE_IOS || JUCE_ANDROID || JUCE_LINUX || __linux__)
 			setFullScreen(true);
 #endif
-			setResizable(false, false);
+			setResizable(true, false);
 			setVisible(true);
 		}
 
