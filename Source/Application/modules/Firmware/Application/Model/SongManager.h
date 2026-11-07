@@ -106,7 +106,6 @@ namespace Ignite
 		std::string getName(void);
 		//CSong* getSong (uint8_t index);
 		//bool getFillMode(void);
-		int32_t getSongCount(void);
 
 		void setActiveSong (int32_t index);
 		void setTempo(float val);
