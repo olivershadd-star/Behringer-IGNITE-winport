@@ -417,7 +417,6 @@ public:
 			{
 				comp->addKeyListener(this); //over ride
 				Dwind->grabKeyboardFocus();
-				TopLevelWindow* top = TopLevelWindow::getActiveTopLevelWindow();
 				this->setFocusContainerType(FocusContainerType::keyboardFocusContainer);
 				GetFocusagain = false;
 			}
