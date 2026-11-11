@@ -37,6 +37,8 @@ prelude='''// Generated from verified original IGNITE declarations. See provenan
 #include <algorithm>
 #include <iterator>
 #include <cassert>
+#include <tuple>
+#include <chrono>
 #ifndef DBG
 #define DBG(...) ((void)0)
 #endif
@@ -52,6 +54,13 @@ for kind,name in [('enum class','Note'),('enum class','TimeBase'),('struct','Cli
     prelude+=declaration(params,kind,name)+'\n'
 prelude+='using StepData=ClientPatternStepData;\nusing NodeData=ClientPatternNodeData;\n'
 prelude+=declaration(data,'struct','UsedByData')+'\n}\n'
+prelude+='namespace Ignite {\n'
+for kind,name in [('enum class','PatternChangeParameter'),('enum','MidiEventType'),('enum','PatternEventType'),('struct','MidiEvent')]:
+    prelude+=declaration(params,kind,name)+'\n'
+for name in ('PatternBarStepInfo','PatternBarInfo','BarLoopRange','PatternInfo'):
+    prelude+=declaration(data,'struct',name)+'\n'
+prelude+='}\n'
+prelude+=re.search(r'^#define\s+MAX_POLYPHONIC_NOTES\s+[^\n]+',params,re.M).group(0)+'\n'
 (out/'MusicalTypes.h').write_text(prelude)
 
 adaptations={}
@@ -119,5 +128,44 @@ Pattern& Pattern::operator=(const Pattern& source)
     if 'engine.' in active or 'Firmware/' in active:raise RuntimeError('Hardware dependency remains in '+name)
     (out/name).write_text(text)
     adaptations[name]={'original_sha256':manifest[name]['sha256'],'adapted_sha256':hashlib.sha256(text.encode()).hexdigest()}
+
+def remove_function(text,signature):
+    start=text.index(signature)
+    brace=text.index('{',start);pos=brace+1;depth=1
+    while depth:
+        if text[pos]=='{':depth+=1
+        if text[pos]=='}':depth-=1
+        pos+=1
+    return text[:start]+text[pos:]
+
+for name in ('SequenceManager.h','SequenceManager.cpp'):
+    text=sources[name]
+    if name.endswith('.h'):
+        text=text.replace('#include "Firmware/Application/Model/ModelParams.h"','#include "MusicalTypes.h"')
+        text=text.replace('#include "common_defs/source/EngineDataStruct.h"','#include "Pattern.h"')
+        text=text.replace('#include "IgniteEngine.h"','#include "SequenceHost.h"')
+        text=text.replace(' : public Module, public StepChangeListener, public BarChangeListener, public PatternChangeListener','')
+        text=text.replace('SequenceManager(IParamChangeListener* listener, IgniteEngine& model);','explicit SequenceManager(SequenceHost& host);')
+        text=text.replace('IgniteEngine& engine;','SequenceHost& _host;')
+        text=re.sub(r'^.*(?:setParamList|getParamList|SetCommandParam|getParam\(|updateEventMapForActiveSong|void init\(|void initSequence\(void\)).*\n','',text,flags=re.M)
+        text=text.replace('virtual ','').replace(' override','').replace('override','')
+    else:
+        text=remove_function(text,'SequenceManager::SequenceManager(')
+        for signature in ('void SequenceManager::init(void)','void SequenceManager::initSequence(void)',
+                          'void SequenceManager::setParamList(', 'std::vector<IgniteParamList> SequenceManager::getParamList(',
+                          'void SequenceManager::SetCommandParam(', 'void SequenceManager::getParam(',
+                          'void SequenceManager::updateEventMapForActiveSong(void)'):
+            text=remove_function(text,signature)
+        text+='\nSequenceManager::SequenceManager(SequenceHost& host) : _host(host) {}\n'
+        text=text.replace('engine.patternManager->GetPattern(patternName)','_host.findPattern(patternName)')
+        # A desktop user can skip every step. The original reverse/pendulum
+        # branches formed invalid iterator ranges for empty/singleton bars.
+        guard='std::vector<int16_t> SequenceManager::applyDirection(std::vector<int16_t>&& currentSequence, PatternDirection direction)\n{'
+        if guard not in text:raise RuntimeError('Original direction implementation changed')
+        text=text.replace(guard,guard+'\n\tif (currentSequence.empty() || (currentSequence.size() == 1 && direction == PatternDirection::pendulum)) return currentSequence;')
+    active=re.sub(r'/\*.*?\*/|//[^\n]*','',text,flags=re.S)
+    if 'engine.' in active or 'Firmware/' in active:raise RuntimeError('Hardware dependency remains in '+name)
+    (out/name).write_text(text)
+    adaptations[name]={'original_sha256':manifest[name]['sha256'],'adapted_sha256':hashlib.sha256(text.encode()).hexdigest()}
 (out/'adaptation-manifest.json').write_text(json.dumps(adaptations,indent=2)+'\n')
-print('Verified original sources; staged Pattern/Bar/Step without JUCE, firmware bootstrap or hardware.')
+print('Verified original sources; staged Pattern/Bar/Step/SequenceManager without JUCE, firmware bootstrap or hardware.')

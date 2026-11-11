@@ -30,5 +30,13 @@
   "EngineDataStruct.h": {
     "path": "Source/Application/modules/common_defs/source/EngineDataStruct.h",
     "sha256": "d950b80d644c589039cef4426bb1d0d7aa98942dce8f9c181f11681e7e4ae637"
+  },
+  "SequenceManager.h": {
+    "path": "Source/Application/modules/Firmware/Application/Model/SequenceManager.h",
+    "sha256": "536fcd643877029113017c52985735cd510841a5602ce1b8a7de0e0000000ae7"
+  },
+  "SequenceManager.cpp": {
+    "path": "Source/Application/modules/Firmware/Application/Model/SequenceManager.cpp",
+    "sha256": "192f2a1fd19be70399598f3266e531b1dbd76a3f6eb5dccffd3b075d719d8f2c"
   }
 }

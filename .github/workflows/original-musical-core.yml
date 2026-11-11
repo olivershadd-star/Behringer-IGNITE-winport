@@ -17,7 +17,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Configure original classes without hardware or JUCE
         run: cmake -S DesktopCore -B build/original-patterns
-      - name: Build original Pattern, Bar and Step
+      - name: Build original model, sequencer and local PCM adapter
         run: cmake --build build/original-patterns --config Release --parallel 2
-      - name: Test musical model and host boundaries
+      - name: Test original model, sequencer and synthesized sound
         run: ctest --test-dir build/original-patterns -C Release --output-on-failure
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Original-core-validation-${{ matrix.os }}
+          path: |
+            build/original-patterns/original-core-audio.wav
+            build/original-patterns/Testing/Temporary/LastTest.log
+            build/original-patterns/original-model/adaptation-manifest.json
+          if-no-files-found: warn
