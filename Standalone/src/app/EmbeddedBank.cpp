@@ -6,7 +6,7 @@
 #include <windows.h>
 EmbeddedBank getEmbeddedBank() {
     const auto module=GetModuleHandleW(nullptr);
-    const auto resource=FindResourceW(module,MAKEINTRESOURCEW(101),RT_RCDATA);
+    const auto resource=FindResourceW(module,MAKEINTRESOURCEW(101),MAKEINTRESOURCEW(10));
     if(resource==nullptr)return {};
     const auto loaded=LoadResource(module,resource);
     return {loaded?LockResource(loaded):nullptr,SizeofResource(module,resource)};
