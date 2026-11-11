@@ -12,7 +12,7 @@ if ($SoundFont) {
     Copy-Item -LiteralPath $SoundFont -Destination (Join-Path $source "sf/Ignite.sf2")
 }
 $configureExtra = @()
-if ($Diagnostics) { $configureExtra += '-DCMAKE_EXE_LINKER_FLAGS_RELEASE=/DEBUG' }
+if ($Diagnostics) { $configureExtra += '-DCMAKE_EXE_LINKER_FLAGS_RELEASE=/DEBUG /OPT:REF /OPT:ICF /INCREMENTAL:NO' }
 & cmake -S $source -B $build -G "Visual Studio 17 2022" -A x64 -DIGNITE_DESKTOP=ON -DENABLE_HARDWARE_TEST=OFF @configureExtra
 if ($LASTEXITCODE -ne 0) { throw "Echec de configuration CMake" }
 & cmake --build $build --config $Configuration --target Ignite --parallel 2
