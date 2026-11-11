@@ -1084,6 +1084,7 @@ bool Track::getTxInstrumentData(void)
 
 void Track::initTrackPlaySetting (void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
 	Pattern* patternToPlay = getTrackPattern ();
 
 	if (patternToPlay == nullptr)
@@ -2757,6 +2758,7 @@ void Track::sfSynthesizeAudio(void)
 	juce::dsp::AudioBlock<float> outputBlock(audioBuff);
 	dsp::ProcessContextReplacing<float> buffer(outputBlock);
 #endif
+    if (_trackSf == nullptr) return;
 	if (_trackSf != nullptr)
 	{
 
