@@ -63,8 +63,11 @@ void PatternPlayback::prepare(double sampleRate) {
     stop();
     rate = std::clamp(sampleRate, 8000.0, 192000.0);
     if (synth) {
-        tsf_set_output(synth, TSF_STEREO_INTERLEAVED, static_cast<int>(rate), -6.0f);
-        tsf_set_max_voices(synth, 32);
+        // Original Track::sfInit: mono voice bus, 8 voices, zero dB and 0.9
+        // channel volume; only the hardware sample rate becomes a host value.
+        tsf_set_output(synth, TSF_MONO, static_cast<int>(rate), 0.0f);
+        tsf_set_max_voices(synth, MAX_POLYPHONIC_NOTES);
+        for(int channel=0;channel<2;++channel)tsf_channel_set_volume(synth,channel,0.9f);
     }
 }
 bool PatternPlayback::setPreset(int bank, int program) {
@@ -106,7 +109,6 @@ void PatternPlayback::render(float* left, float* right, int frames) {
     if (frames <= 0) return;
     std::fill_n(left, frames, 0.0f);std::fill_n(right, frames, 0.0f);
     if ((!playing && previewTail<=0) || !synth) return;
-    std::array<float, 256> interleaved{};
     std::array<float, 128> mono{};
     // Original Pattern has 48 musical ticks per quarter. The host sample clock
     // replaces the firmware's 96-PPQN hardware pulse source (two pulses/tick).
@@ -126,12 +128,11 @@ void PatternPlayback::render(float* left, float* right, int frames) {
         if (playing && nextEvent < pattern.notes.size()) untilBoundary=std::min(untilBoundary,pattern.notes[nextEvent].tick*framesPerTick-frameInLoop);
         if (previewGate>0) untilBoundary=std::min(untilBoundary,previewGate);
         const int count = std::min({128, frames-offset, std::max(1, static_cast<int>(std::ceil(untilBoundary-1e-9)))});
-        tsf_render_float(synth, interleaved.data(), count, 0);
+        tsf_render_float(synth, mono.data(), count, 0);
         if (effects) {
-            for (int i=0;i<count;++i) mono[i]=(interleaved[i*2]+interleaved[i*2+1])*0.5f;
             effects->process(mono.data(),count);
-            for (int i=0;i<count;++i) left[offset+i]=right[offset+i]=mono[i];
-        } else for (int i=0;i<count;++i) {left[offset+i]=interleaved[i*2];right[offset+i]=interleaved[i*2+1];}
+        }
+        for (int i=0;i<count;++i) left[offset+i]=right[offset+i]=mono[i];
         if(previewGate>0) {previewGate-=count;if(previewGate<=0)tsf_channel_note_off_all(synth,1);}
         previewTail=std::max(0.0,previewTail-count);
         offset += count;if(playing)frameInLoop += count;totalFrames += count;

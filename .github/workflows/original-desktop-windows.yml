@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Build original musical core, original effects and PC editor
+      - name: Build original mono voice bus, musical core, effects and PC editor
         shell: pwsh
         run: |
           cmake -S Desktop -B build/core-desktop -G 'Visual Studio 17 2022' -A x64

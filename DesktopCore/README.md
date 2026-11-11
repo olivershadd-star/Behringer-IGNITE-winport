@@ -1,6 +1,6 @@
 # Premiere separation du coeur musical original
 
-Cette cible compile les **classes originales `Ignite::Pattern`, `Bar`, `Step` et `SequenceManager`**, extraites du ZIP fourni. Elle ne compile ni le firmware, ni l'ancienne interface, ni le prototype `Standalone`, ni JUCE. Ce n'est pas encore une nouvelle application IGNITE a telecharger.
+Cette cible compile les **classes originales `Ignite::Pattern`, `Bar`, `Step` et `SequenceManager`**, extraites du ZIP fourni. Elle ne compile ni le firmware, ni l'ancienne interface, ni le prototype `Standalone`, ni JUCE. C'est une bibliotheque ; l'application JUCE qui l'utilise se construit dans [Desktop](../Desktop/README.md).
 
 Les dix fichiers originaux sont conserves sans modification dans `upstream/`, avec leurs chemins et SHA-256 dans `provenance.json`. `tools/stage.py` verifie ces empreintes avant chaque configuration et genere une adaptation traçable dans le dossier de construction.
 
@@ -31,4 +31,4 @@ Le test audio charge la banque locale, rend un piano puis un kick, controle les 
 
 ## Integration restant a effectuer
 
-Relier l'editeur PC a ces objets, isoler et relier la lecture complete des pistes et scenes, ainsi que la chaine d'effets originale de `Track`, puis valider la sortie audio Windows. Le petit sequenceur `Standalone` ne doit pas etre confondu avec cette cible musicale originale. Les tests ci-dessus ne valident pas encore une lecture complete d'IGNITE sous Windows.
+L'editeur PC dans `Desktop` relie maintenant ces objets a une premiere grille d'une mesure, aux instruments locaux et aux traitements d'effets extraits de `Track`. La configuration du bus de voix garde le mono, les huit voix et le niveau de canal 0,9 de `Track::sfInit`. La lecture complete des pistes et scenes ainsi que la validation physique de la sortie Windows restent a effectuer. Le petit sequenceur `Standalone` ne doit pas etre confondu avec cette cible musicale originale. Les tests ci-dessus ne valident pas encore toutes les fonctions d'IGNITE.
