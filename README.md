@@ -1,10 +1,10 @@
 # IGNITE — portage Windows en cours
 
-Adaptation du sequençeur Behringer IGNITE pour fonctionner sans la machine physique : ecran original, facade virtuelle integree, moteur TinySoundFont et effets d'origine. GeneralUser GS est fourni comme banque de remplacement avec sa licence.
+Adaptation du sequençeur Behringer IGNITE pour fonctionner sans la machine physique : interface JUCE, moteur TinySoundFont et effets d'origine. Le panneau ajoute au premier portage a ete retire. GeneralUser GS est fourni comme banque de remplacement avec sa licence.
 
 [Compilation et tests Windows](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/workflows/windows-desktop.yml) · [Guide Windows](WINDOWS-FR.md) · [Architecture du portage](PORTAGE-WINDOWS.md)
 
-[Telecharger la version Windows de test](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/42967663743/artifacts/13832047559).
+Les compilations telechargeables figurent dans les runs reussis du workflow ci-dessus. La restauration de l'interface d'origine est en cours de validation ; l'artefact du run 42967663743 utilise encore l'ancien panneau.
 
 Le workflow produit un seul ZIP contenant directement `Ignite.exe`, `assets/` et `Ignite.sf2`. Les anciennes archives du premier prototype ne sont pas la version actuelle. La compilation Windows, le lancement, l'horloge (demarrage/pause/reprise) et la lecture du sequenceur avec mixage hors ligne ont reussi dans le [run 42967663743](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/42967663743). Le signal mesure est non nul et sans valeur invalide detectee. L'utilisation complete a la souris et la sortie audio physique restent a valider.
 

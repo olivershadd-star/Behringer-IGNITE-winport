@@ -102,6 +102,9 @@ public:
 	//==============================================================================
 	void initialise(const juce::String& commandLine) override
 	{
+#if defined(IGNITE_DESKTOP)
+        if (commandLine.contains("--original-ui-test")) OriginalUiSmoke::prepare();
+#endif
 #if defined SHOW_BOOT_IMAGE
 		int waitCount = ENGINE_READY_WAIT_TIME_SEC;
 #ifdef _WIN64

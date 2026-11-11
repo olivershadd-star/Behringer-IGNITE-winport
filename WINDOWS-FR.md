@@ -1,6 +1,6 @@
 # IGNITE sur Windows x64
 
-Cette version de developpement conserve le moteur musical et l'ecran d'origine. Une facade virtuelle integree remplace les commandes physiques. Ce n'est pas une version officielle Behringer.
+Cette version de developpement conserve le moteur musical et l'interface JUCE d'origine, dans une fenetre Windows de 1024 x 600 pixels. Ce n'est pas une version officielle Behringer.
 
 ## Installer une compilation
 
@@ -10,9 +10,9 @@ La banque GeneralUser GS de S. Christian Collins est incluse avec sa licence. El
 
 ## Commandes
 
-Le centre de la fenetre reste l'ecran tactile d'IGNITE. Les commandes autour remplacent sa facade : SONG/SCENE/TRACK/PATTERN, transport, INSERT/DELETE/COPY, 16 pads, appui et rotation de leurs encodeurs, ROW/BAR et huit commandes sonores. SHIFT est une touche a verrouillage. Audio settings permet de choisir la sortie Windows ; le statut indique la banque et le peripherique actifs. Les nouveaux instruments utilisent les sons internes par defaut. Les anciennes definitions d'instruments restent telles quelles : activer Internal Sound dans leurs reglages pour les utiliser avec la banque locale.
+Les ecrans Menu, Song, Scene, Track, Pattern, les boutons de transport et le navigateur de presets proviennent de `Source/Application/modules/ignite_ui`. Le panneau de commandes ajoute dans le premier portage a ete retire. Les dialogues d'origine restent dans la fenetre de l'application.
 
-Espace = lecture, Echap = stop, fleches gauche/droite = navigation, Entree = selection. Le bouton Help explique les commandes. L'ajout d'un instrument est une definition de routage et de preset dans le modele IGNITE, pas le chargement d'un plugin VST.
+Pour choisir un son : Menu > Instruments > Add New > Preset, choisir une categorie puis un son et Apply. Les nouveaux instruments utilisent les sons internes par defaut. Pour une definition ancienne, activer Internal Sound dans ses reglages. F10 ouvre le choix de la sortie audio Windows ; choisir 48000 Hz.
 
 ## Compiler
 

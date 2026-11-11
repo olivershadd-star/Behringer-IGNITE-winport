@@ -4,7 +4,8 @@
 // Test-only automation of the existing JUCE buttons. No alternative interface.
 class OriginalUiSmoke final : private juce::Timer {
 public:
-    static void start(Ignite::IgniteEngine& engine) {
+    static void prepare() {
+        juce::File::getCurrentWorkingDirectory().getChildFile("original-ui-progress.txt").replaceWithText("Starting original UI test\n");
         std::set_terminate([] {
             juce::String reason = "Unhandled C++ exception";
             if (auto error = std::current_exception()) {
@@ -15,8 +16,8 @@ public:
             juce::File::getCurrentWorkingDirectory().getChildFile("original-ui-progress.txt").appendText(reason + "\n");
             std::_Exit(4);
         });
-        (new OriginalUiSmoke(engine))->startTimer(500);
     }
+    static void start(Ignite::IgniteEngine& engine) { (new OriginalUiSmoke(engine))->startTimer(500); }
 private:
     explicit OriginalUiSmoke(Ignite::IgniteEngine& engineIn) : engine(engineIn), initialCount(engineIn.instrumentManager->getInstrumentCount()) {}
     juce::Button* find(juce::Component& root, const juce::String& id) {
