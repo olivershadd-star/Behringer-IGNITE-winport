@@ -1,3 +1,4 @@
+#include "Common/Modules/TrackBatches.h"
 #include <string>
 #include <iostream>
 #include <iterator>
@@ -3130,17 +3131,12 @@ void SongManager::pulse(uint16_t pulse)
 	int16_t sceneBarId = activeSong->getPlayScene()->gBarId;
 	int16_t sceneStepId = activeSong->getPlayScene()->gStepId;
 #ifdef ENABLE_THREADS_TO_PLAY
-	std::list<TrackAndPosition> listTohandle;
-	int count = 0;
-
-	for (auto& track : trackList)
-	{
-		TrackAndPosition data = { &track, sceneBarId, sceneStepId };
-		listTohandle.push_back(data);
-
-		if ((count + 1) % 8 == 0)
-		{
-			int queueIndex = count / 8; //each Q has 8 track to handle
+    dispatchTrackBatches(trackList.begin(), trackList.end(),
+        [this, sceneBarId, sceneStepId](std::size_t worker, auto first, auto last) {
+            std::list<TrackAndPosition> listTohandle;
+            for (auto it = first; it != last; ++it)
+                listTohandle.push_back(TrackAndPosition{ &*it, sceneBarId, sceneStepId });
+            const auto queueIndex = worker;
 			switch (queueIndex)
 			{
 			case 0: TrackPlayQ_0.put(listTohandle); break;
@@ -3152,10 +3148,7 @@ void SongManager::pulse(uint16_t pulse)
 			case 6: TrackPlayQ_6.put(listTohandle); break;
 			case 7: TrackPlayQ_7.put(listTohandle); break;
 			}
-			listTohandle.clear();
-		}
-		count++;
-	}
+        });
 
 #else
 	for (auto& track : trackList)

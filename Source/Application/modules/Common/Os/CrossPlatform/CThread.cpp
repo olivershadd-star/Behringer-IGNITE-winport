@@ -7,7 +7,7 @@ CThread::CThread (const char* name, uint16_t stacksizebytes, ThreadPriority prio
 
 CThread::~CThread()
 {
-	_thread.join();
+	if (_thread.joinable()) _thread.join();
 }
 
 void* CThread::startThread (ThreadFunction func, void* context)
