@@ -6,7 +6,15 @@ Premiere etape : six pistes de batterie et d'instruments internes, un pattern de
 
 [Compilation et tests de la nouvelle base](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/workflows/standalone-windows.yml) · [Utilisation et limites](Standalone/README.md)
 
-La nouvelle compilation est en cours de verification. Les anciennes archives `Ignite-Windows-x64` concernent le prototype refuse.
+[Telecharger IGNITE Standalone 0.1 pour Windows x64](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/43035665513/artifacts/13862828059)
+
+Un ZIP, cinq fichiers : extraire une seule fois puis lancer **IgniteStandalone.exe** et cliquer **PLAY**. La demonstration est prete. Les anciennes archives `Ignite-Windows-x64` concernent le prototype refuse.
+
+![Nouvelle groovebox Windows en lecture](docs/standalone/windows-demo.png)
+
+Le [run Windows 43035665513](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/43035665513), code `7969cd8a`, passe les tests du coeur et les clics/touches Windows SendInput : PLAY/STOP, effacer, creer un pas, changer un instrument, l'ecouter, selectionner Lead et tenir/relacher une touche du clavier. Le signal du callback est enregistre et analyse. Les fichiers JSON passent un aller-retour d'enregistrement/lecture et un fichier invalide est refuse. La carte son physique de l'utilisateur reste a verifier.
+
+[Rapport interface](docs/standalone/windows-ui-test.txt) · [Rapport moteur](docs/standalone/windows-core-tests.txt) · [Rendu WAV de la demo](docs/standalone/demo-engine.wav) · [Clavier pendant une note](docs/standalone/windows-keyboard.png)
 
 ---
 

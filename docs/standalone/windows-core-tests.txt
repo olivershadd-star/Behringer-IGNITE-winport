@@ -1,0 +1,23 @@
+Start testing: Nov 11 14:10 Coordinated Universal Time
+----------------------------------------------------------
+1/1 Testing: audio_core
+1/1 Test: audio_core
+Command: "D:/a/Behringer-IGNITE-winport/Behringer-IGNITE-winport/build/standalone/Release/ignite_core_tests.exe" "D:/a/Behringer-IGNITE-winport/Behringer-IGNITE-winport/Standalone/resources/Ignite.sf2" "D:/a/Behringer-IGNITE-winport/Behringer-IGNITE-winport/build/standalone/ignite-demo.wav"
+Directory: D:/a/Behringer-IGNITE-winport/Behringer-IGNITE-winport/build/standalone
+"audio_core" start time: Nov 11 14:10 Coordinated Universal Time
+Output:
+----------------------------------------------------------
+Available internal instruments: 141
+44100 Hz: all 6 instruments audible, variable buffers safe, 32 steps exact, stop silent
+48000 Hz: all 6 instruments audible, variable buffers safe, 32 steps exact, stop silent
+96000 Hz: all 6 instruments audible, variable buffers safe, 32 steps exact, stop silent
+PASS: program changes affect audio, device reopen retains sound, overload can stop safely
+<end of output>
+Test time =   0.27 sec
+----------------------------------------------------------
+Test Passed.
+"audio_core" end time: Nov 11 14:10 Coordinated Universal Time
+"audio_core" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Nov 11 14:10 Coordinated Universal Time

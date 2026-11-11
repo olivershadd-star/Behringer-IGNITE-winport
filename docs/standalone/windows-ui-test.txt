@@ -1,0 +1,3 @@
+PASS: Native Windows clicks: demo PLAY/STOP, clear, create a kick step and play it, select another instrument, audition it, select Lead and play/release the on-screen keyboard, restore demo; JSON file round-trip and invalid-file rejection.
+stage=16 frames=443136 energy=1197.862878
+Physical audio device not tested. Windows SendInput mouse/keyboard and the application audio callback were exercised.
