@@ -141,6 +141,8 @@ public:
                 song->setActiveSong(song->getSongCount() - 1);
                 song->setSystemState(::KEY_PRESSED::PLAY_KEY);
                 song->playSong(0);
+                if (auto* scene = song->getPlayScene())
+                    for (auto& track : scene->_sceneData->trackList) track.diagnoseAudio.store(true);
                 double energy = 0;
                 for (int blockIndex = 0; blockIndex < 150; ++blockIndex) {
                     float block[INTERNAL_AUDIO_20MS_BLOCK_SIZE]{};
@@ -160,7 +162,8 @@ public:
                             + " synth=" + juce::String(track._trackSf != nullptr ? 1 : 0)
                             + " pattern=" + juce::String(track.getTrackPattern() != nullptr ? 1 : 0)
                             + " internal=" + juce::String(instrument && instrument->getInternalSound() ? 1 : 0)
-                            + " muted=" + juce::String(track.trackMuted() ? 1 : 0);
+                            + " muted=" + juce::String(track.trackMuted() ? 1 : 0)
+                            + " invalidStage=" + juce::String(track.audioInvalidStage.load());
                     }
                 }
                 song->stopSong();

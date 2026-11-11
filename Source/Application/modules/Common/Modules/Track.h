@@ -414,7 +414,10 @@ namespace Ignite
 		std::unordered_set <uint8_t> _noteOnList;
 		std::unordered_map <uint8_t, uint8_t> _playingNoteList;
 
-		void* _trackSf = nullptr;
+		std::recursive_mutex _soundMutex;
+        std::atomic_bool diagnoseAudio{false};
+        std::atomic<int> audioInvalidStage{0};
+        void* _trackSf = nullptr;
 		AudioDataType _twentyMsBuffer[INTERNAL_AUDIO_20MS_BLOCK_SIZE] = { 0 };
 		juce::AudioBuffer<float> audioBuff;
 

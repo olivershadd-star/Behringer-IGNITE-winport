@@ -1,3 +1,4 @@
+#include <cmath>
 #include <string>
 #include <assert.h>
 #include <random>
@@ -2665,6 +2666,7 @@ bool Track::isValidNoteEvent (midiData data)
 
 void Track::AuditioningTrackInit(void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
 	resetEffects();
 	effectsInit();
 	_noteOnList.clear();
@@ -2681,11 +2683,13 @@ void Track::AuditioningTrackInit(void)
 }
 void Track::AuditioningTrackSetPreset(int presetindex)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
     if (_trackSf == nullptr) return;
 	tsf_channel_set_presetindex(static_cast<tsf*>(_trackSf), 0, presetindex);
 }
 void Track::AuditioningTrackClear(void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
     if (_trackSf == nullptr) return;
 	_noteOnList.clear();
 	tsf_channel_note_off_all(static_cast<tsf*>(_trackSf), 0);
@@ -2693,6 +2697,7 @@ void Track::AuditioningTrackClear(void)
 
 void Track::sfInit(void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
 	tsf* sf = static_cast<tsf*>(_trackSf);
     if (sf == nullptr) return;
 	tsf_set_output(sf, TSF_MONO, INTERNAL_AUDIO_SAMPLE_RATE, 0); //sample rate
@@ -2703,6 +2708,7 @@ void Track::sfInit(void)
 
 void Track::sfReset(void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
 	if (_trackSf != nullptr)
 	{
 		//release tsf resources
@@ -2712,6 +2718,7 @@ void Track::sfReset(void)
 
 void Track::sfLoad(void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
 	//tsf set up
 	if(_trackSf == nullptr)
 		_trackSf = tsf_copy(static_cast<tsf*>(_songManager->get_tsf_instance()));
@@ -2723,18 +2730,26 @@ void Track::sfLoad(void)
 
 void Track::sfNoteOn(uint8_t channel, uint8_t key, float velocity)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
     if (_trackSf == nullptr) return;
 	tsf_channel_note_on(static_cast<tsf*>(_trackSf), channel, key, velocity);
 }
 
 void Track::sfNoteOff(uint8_t channel, uint8_t key)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
     if (_trackSf == nullptr) return;
 	tsf_channel_note_off(static_cast<tsf*>(_trackSf), channel, key);
 }
 
 void Track::sfSynthesizeAudio(void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
+    const auto checkStage = [this](int stage) {
+        if (!diagnoseAudio.load() || audioInvalidStage.load() != 0) return;
+        for (float sample : _twentyMsBuffer)
+            if (!std::isfinite(sample)) { audioInvalidStage.store(stage); break; }
+    };
     std::fill_n(_twentyMsBuffer, INTERNAL_AUDIO_20MS_BLOCK_SIZE, 0.0f);
 #ifdef USE_INTERNAL_EFFECTS
 	float* TwentyMsBufferPtr = _twentyMsBuffer;
@@ -2769,6 +2784,7 @@ void Track::sfSynthesizeAudio(void)
 #endif
 
 	}
+    checkStage(1); // Raw SoundFont output, before JUCE effects.
 #ifdef USE_INTERNAL_EFFECTS
 	for (auto index = 0; index < AUDIO_EFFECT_MAX; index++)
 	{
@@ -2784,7 +2800,7 @@ void Track::sfSynthesizeAudio(void)
 		break;
 
 		case AUDIO_CHORUS:
-			if (chorusStatus[1] == true)
+			if (chorusStatus[0] == true)
 				_Chorus[0].process(buffer);
 			break;
 		case AUDIO_EQ_L:
@@ -2807,6 +2823,7 @@ void Track::sfSynthesizeAudio(void)
 		default:
 			break;
 		}
+        checkStage(index + 2);
 	}
 #ifdef LOG_PCM_TO_FILE
 //Log data after effets are applied
@@ -2814,12 +2831,14 @@ void Track::sfSynthesizeAudio(void)
 
 	//Volume affected by the filter gain and other params .. Volume applied after all effects
 	trackGain.process(buffer);
+    checkStage(10);
 #endif /* USE_INTERNAL_EFFECTS */
 
 }
 
 void Track::sfSetProgram(void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
     if (_trackSf == nullptr) return;
 	if (_trackData->trackTxInstrument)
 	{
@@ -2844,6 +2863,7 @@ void Track::sfSetProgram(void)
 
 void Track::sfChangeProgram(void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
     if (_trackSf == nullptr) return;
 	tsf_channel_note_off_all(static_cast<tsf*>(_trackSf), 0);
 	sfSetProgram();
@@ -2852,6 +2872,7 @@ void Track::sfChangeProgram(void)
 
 void Track::setInternalAudioEffects(uint8_t knobID, float value, bool isAlternate)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
 #ifdef USE_INTERNAL_EFFECTS
 	uint8_t knobBank = knobID % 8;
 	switch (knobBank)
@@ -2906,11 +2927,11 @@ void Track::setInternalAudioEffects(uint8_t knobID, float value, bool isAlternat
 	case (uint8_t)InternalAudioCC::CHORUS:
 		if (value == 0)
 		{
-			chorusStatus[1] = false;
+			chorusStatus[0] = false;
 		}
 		else
 		{
-			chorusStatus[1] = true;
+			chorusStatus[0] = true;
 			if (isAlternate)
 				_Chorus[0].setDepth(value * 0.01f);
 			else
@@ -2989,6 +3010,7 @@ void Track::setInternalAudioEffects(uint8_t knobID, float value, bool isAlternat
 
 void Track::resetEffects(void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
 #ifdef TEST_ENABLE_SAMPLE
 	readaudiofile = 1;
 	IndexReadaudiofile = 0;
@@ -3002,6 +3024,7 @@ void Track::resetEffects(void)
 
 void Track::effectsInit(void)
 {
+    std::lock_guard<std::recursive_mutex> soundLock(_soundMutex);
 	reverbInit();
 	chorusInit();
 	eqInit();
