@@ -144,6 +144,18 @@ namespace ui
 
 		void show(std::function<void(int R)> Callback)
 		{
+#if defined(IGNITE_DESKTOP) && defined(_WIN32)
+            // This shared dialog may have been constructed before MainWindow.
+            if (auto* owner = dynamic_cast<juce::DocumentWindow*>(juce::TopLevelWindow::getActiveTopLevelWindow())) {
+                if (auto* content = owner->getContentComponent()) {
+                    if (getParentComponent() != content) {
+                        removeFromDesktop();
+                        content->addChildComponent(this);
+                    }
+                    setBounds(content->getLocalBounds());
+                }
+            }
+#endif
 			image.clear(ui::layout::screen);
 			if(!showImage)
 			if (auto w = juce::TopLevelWindow::getActiveTopLevelWindow())

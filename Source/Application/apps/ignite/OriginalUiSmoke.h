@@ -49,14 +49,14 @@ private:
             if (click("ignite.dialog.apply")) ++stage;
             break;
         case 6: {
-            auto* instrument = engine.instrumentManager->getInstrumentFromListIndex(initialCount);
+            auto* instrument = engine.instrumentManager->getInstrumentFromListIndex(static_cast<int8_t>(initialCount));
             if (instrument && instrument->getInternalSoundPgm() == 9 && click("ignite.presets")) ++stage;
             break;
         }
         case 7: {
             auto* group = find(ui::getAppHome(), "ignite.preset.group");
             auto* second = find(ui::getAppHome(), "ignite.preset.second");
-            auto* instrument = engine.instrumentManager->getInstrumentFromListIndex(initialCount);
+            auto* instrument = engine.instrumentManager->getInstrumentFromListIndex(static_cast<int8_t>(initialCount));
             if (!group || !second || !instrument) break;
             if (group->getButtonText() != "Chromatic Percussion" || !second->getToggleState() || instrument->getInternalSoundPgm() != 9) {
                 finish(false, "Reopening presets changed the selected group or sound"); return;
