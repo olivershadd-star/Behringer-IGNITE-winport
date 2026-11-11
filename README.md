@@ -1,10 +1,10 @@
-# Portage communautaire Windows x64
+# IGNITE — portage Windows en cours
 
-La compilation Windows est validee par [GitHub Actions](https://github.com/olivershadd-star/Bhringer-IGNITE/actions/runs/42388196042).
+Adaptation du sequençeur Behringer IGNITE pour fonctionner sans la machine physique : ecran original, facade virtuelle integree, moteur TinySoundFont et effets d'origine. GeneralUser GS est fourni comme banque de remplacement avec sa licence.
 
-[Telecharger le paquet Windows](https://github.com/olivershadd-star/Bhringer-IGNITE/raw/refs/heads/main/downloads/Ignite-Windows-x64.zip). Extraire une seule fois le ZIP, puis lancer `Ignite.exe` en conservant `assets/` a cote. Fournir sa propre banque `Ignite.sf2` pour les sons internes.
+[Compilation et tests Windows](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/workflows/windows-desktop.yml) · [Guide Windows](WINDOWS-FR.md) · [Architecture du portage](PORTAGE-WINDOWS.md)
 
-Version de developpement : fonctionnement interactif, audio et MIDI encore a tester sur PC Windows. Voir [le guide Windows](WINDOWS-FR.md). Documentation amont conservee ci-dessous.
+Le workflow produit un seul ZIP contenant directement `Ignite.exe`, `assets/` et `Ignite.sf2`. Les anciennes archives du premier prototype ne sont pas la version actuelle. Le lancement et l'affichage ont deja ete testes ; le test de lecture du sequenceur doit etre confirme dans ce nouveau depot. L'utilisation complete a la souris et la sortie audio physique restent a valider.
 
 ---
 
