@@ -19,3 +19,9 @@ Le panneau virtuel remplace les boutons et encodeurs physiques, sans ajouter de 
 Test de synthese TinySoundFont avec la banque fournie : chargement, piano/basse/lead, sortie non silencieuse et echantillons finis. Test du callback a tailles variables conserve.
 
 Le workflow Windows compile puis lance l'application, verifie le chargement de la banque et produit une capture desktop-smoke.png. Ce test ne demontre pas encore la creation et la lecture d'un pattern via l'interface, ni l'audibilite sur un peripherique physique. Ces essais restent necessaires avant de qualifier le portage de fonctionnel. Le routage des ports MIDI externes conserve encore des conventions du materiel.
+
+## Validation Windows confirmee
+
+Run GitHub Actions 42967663743 : compilation MSVC x64, test de demarrage/pause/reprise de l'horloge, lancement de la facade et lecture d'un morceau genere avec une scene, une piste et un pattern. Le mixage hors ligne produit un signal non nul, sans valeur non finie detectee. Le test ne valide pas encore la saisie du pattern a la souris ni une sortie audio physique.
+
+Les corrections incluent la course au demarrage du timer Windows, la prise en compte des groupes de pistes incomplets (moins de huit ou dernier groupe), l'acces hors limites au statut du chorus, la serialisation des commandes SoundFont avec le rendu et la suppression des boucles de sondage MCU sans materiel.

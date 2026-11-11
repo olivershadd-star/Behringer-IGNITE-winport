@@ -4,7 +4,9 @@ Adaptation du sequençeur Behringer IGNITE pour fonctionner sans la machine phy
 
 [Compilation et tests Windows](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/workflows/windows-desktop.yml) · [Guide Windows](WINDOWS-FR.md) · [Architecture du portage](PORTAGE-WINDOWS.md)
 
-Le workflow produit un seul ZIP contenant directement `Ignite.exe`, `assets/` et `Ignite.sf2`. Les anciennes archives du premier prototype ne sont pas la version actuelle. Le lancement et l'affichage ont deja ete testes ; le test de lecture du sequenceur doit etre confirme dans ce nouveau depot. L'utilisation complete a la souris et la sortie audio physique restent a valider.
+[Telecharger la version Windows de test](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/42967663743/artifacts/13832047559).
+
+Le workflow produit un seul ZIP contenant directement `Ignite.exe`, `assets/` et `Ignite.sf2`. Les anciennes archives du premier prototype ne sont pas la version actuelle. La compilation Windows, le lancement, l'horloge (demarrage/pause/reprise) et la lecture du sequenceur avec mixage hors ligne ont reussi dans le [run 42967663743](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/42967663743). Le signal mesure est non nul et sans valeur invalide detectee. L'utilisation complete a la souris et la sortie audio physique restent a valider.
 
 ---
 
