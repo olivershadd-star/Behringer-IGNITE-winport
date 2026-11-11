@@ -515,6 +515,8 @@ namespace ui
 		if (isPatternUpdateneeded)
 		{
 			_PUiVirtualEngine->SetCommand((moduleId_t)ModuleName::moduleUI, (moduleId_t)ModuleName::moduleInstrument, (paramId_t)InstrumentParam::paramInstrumentAdd, 0);
+			// The settings panel must edit the instrument just added, not the previous selection.
+			selected = list.size();
 			//_PUiVirtualEngine->SetCommand((moduleId_t)ModuleName::moduleUI, (moduleId_t)ModuleName::moduleInstrument, (paramId_t)InstrumentParam::paramSetActiveInstrument, instrument_name.toStdString());
 		}
 		populate();
