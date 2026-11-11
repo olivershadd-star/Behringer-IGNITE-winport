@@ -151,11 +151,23 @@ public:
                     }
                     juce::Thread::sleep(20);
                 }
+                juce::String diagnostic;
+                if (auto* scene = song->getPlayScene()) {
+                    diagnostic = "\nScene step: " + juce::String(scene->gStepId);
+                    for (auto& track : scene->_sceneData->trackList) {
+                        auto* instrument = track.getTrackTxInstrument();
+                        diagnostic += "\nTrack step: " + juce::String(track._trackStepIndex)
+                            + " synth=" + juce::String(track._trackSf != nullptr ? 1 : 0)
+                            + " pattern=" + juce::String(track.getTrackPattern() != nullptr ? 1 : 0)
+                            + " internal=" + juce::String(instrument && instrument->getInternalSound() ? 1 : 0)
+                            + " muted=" + juce::String(track.trackMuted() ? 1 : 0);
+                    }
+                }
                 song->stopSong();
                 ok = ok && energy > 0.0001;
                 juce::File::getCurrentWorkingDirectory().getChildFile("desktop-sequence-test.txt")
                     .replaceWithText("Original sequencer offline playback energy: " + juce::String(energy, 8)
-                        + (ok ? " PASS" : " FAIL"));
+                        + (ok ? " PASS" : " FAIL") + diagnostic);
                 // Test-only exit: the embedded upstream engine has detached perpetual threads.
                 std::_Exit(ok ? 0 : 2);
             });

@@ -11,6 +11,7 @@ using namespace Ignite;
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
+#include <mmsystem.h>
 #endif
 
 CHardwareTimer::CHardwareTimer(HardwareTimerCb cb, void* context)
@@ -23,6 +24,11 @@ CHardwareTimer::CHardwareTimer(HardwareTimerCb cb, void* context)
 CHardwareTimer::~CHardwareTimer()
 {
     stop();
+#ifdef _WIN32
+    _running.store(false);
+    _timerCv.notify_all();
+    if (_thread.joinable()) _thread.join();
+#endif
 }
 bool CHardwareTimer::start(const uint16_t intervalus)
 {
@@ -80,14 +86,15 @@ bool CHardwareTimer::start(const uint16_t intervalus)
     pthread_detach(_thread);
 
 #elif defined  _WIN32
-    if (_running)
-    {
-        _activeCB = true;
-        return false;
+    if (intervalus == 0) return false;
+    _activeCB.store(true);
+    // Publish state before spawning: the old worker could exit before start()
+    // set _running. One worker remains alive across pause/resume.
+    if (_running.exchange(true)) {
+        _timerCv.notify_all();
+        return true;
     }
-    // Create and start the timer thread
     _thread = std::thread(&CHardwareTimer::hiResTimerThread, this);
-    _thread.detach();
 #endif
      _running = true;
     _activeCB = true;
@@ -100,6 +107,9 @@ bool CHardwareTimer::stop(void)
     {
     //_running = false; -- not stoping
     _activeCB = false;// disable the Call back
+#ifdef _WIN32
+    _timerCv.notify_all();
+#endif
 #ifdef __linux__
     //pthread_join(_thread, nullptr);
 #endif
@@ -109,6 +119,7 @@ bool CHardwareTimer::stop(void)
 
 bool CHardwareTimer::changeInterval(const uint16_t intervalus)
 {
+    if (intervalus == 0) return false;
     if (!_running)
     {
         start(intervalus);
@@ -116,7 +127,9 @@ bool CHardwareTimer::changeInterval(const uint16_t intervalus)
     else
     {
         _intervalus = intervalus;
-
+#ifdef _WIN32
+        _timerCv.notify_all();
+#endif
 #ifdef __linux__
         struct timespec ts;
         if (clock_gettime (CLOCK_MONOTONIC, &ts) < 0)
@@ -194,59 +207,33 @@ void CHardwareTimer::run(void)
 
 #ifdef _WIN32
 
-void PrintThreadPriority(HANDLE threadHandle)
-{
-    DWORD threadId = GetCurrentThreadId();
-    int priority = GetThreadPriority(threadHandle);
-    if (priority == THREAD_PRIORITY_ERROR_RETURN)
-    {
-        juce::Logger::outputDebugString("Error getting thread priority: " + std::to_string(GetLastError()));
-    }
-    else
-    {
-        juce::Logger::outputDebugString("Current thread ID: " + std::to_string(threadId) + "-Priority " + std::to_string(priority));
-    }
-}
-
 void CHardwareTimer::hiResTimerThread(void)
 {
-    // Set the thread priority high
-    HANDLE currentThread = GetCurrentThread();
-    if (!SetThreadPriority(currentThread, THREAD_PRIORITY_TIME_CRITICAL))
-    {
-        std::cerr << "Error setting thread priority: " << GetLastError() << std::endl;
-    }
-
-    LARGE_INTEGER frequency, start, end;
-    QueryPerformanceFrequency(&frequency);
-
-    double intervalCounts = (_intervalus * frequency.QuadPart) / 1000000.0;
-
-    QueryPerformanceCounter(&start);
-
-    PrintThreadPriority(currentThread);
-
-    while (_running)
-    {
-        QueryPerformanceCounter(&end);
-        double elapsedCounts = static_cast<double>(end.QuadPart - start.QuadPart);
-        if (elapsedCounts >= intervalCounts)
-        {
-            //MyFunction();
-            _callback(_context);
-
-            // Calculate the actual elapsed time and adjust intervalCounts
-            QueryPerformanceCounter(&end);
-            double actualElapsedCounts = static_cast<double>(end.QuadPart - start.QuadPart);
-            double deviationCounts = static_cast<double>(actualElapsedCounts - intervalCounts);
-
-            // Adjust intervalCounts for the next cycle
-            intervalCounts = (_intervalus * frequency.QuadPart) / 1000000.0 - deviationCounts;
-
-            // reset start time
-            start = end;
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+    const bool resolutionSet = timeBeginPeriod(1) == TIMERR_NOERROR;
+    std::unique_lock<std::mutex> lock(_timerMutex);
+    auto next = std::chrono::steady_clock::now();
+    while (_running.load()) {
+        if (!_activeCB.load()) {
+            _timerCv.wait(lock, [this] { return !_running.load() || _activeCB.load(); });
+            next = std::chrono::steady_clock::now();
+            continue;
         }
+        const auto period = std::chrono::microseconds(_intervalus.load());
+        next += period;
+        if (_timerCv.wait_until(lock, next) != std::cv_status::timeout) {
+            next = std::chrono::steady_clock::now();
+            continue;
+        }
+        if (!_running.load() || !_activeCB.load()) continue;
+        lock.unlock();
+        if (_callback) _callback(_context);
+        lock.lock();
+        const auto now = std::chrono::steady_clock::now();
+        if (now > next + period * 4) next = now;
     }
+    lock.unlock();
+    if (resolutionSet) timeEndPeriod(1);
 }
 
 #endif /* _WIN32 */

@@ -154,3 +154,13 @@ set(
 )
 
 include(CPack)
+
+if(WIN32 AND IGNITE_DESKTOP)
+    add_executable(IgniteClockTest
+        "${CMAKE_SOURCE_DIR}/../../tests/windows_clock.cpp"
+        "${CMAKE_SOURCE_DIR}/modules/Common/Board/Simulator/CHardwareTimer.cpp")
+    target_include_directories(IgniteClockTest PRIVATE "${CMAKE_SOURCE_DIR}/modules/Common/Board")
+    target_compile_features(IgniteClockTest PRIVATE cxx_std_17)
+    target_compile_options(IgniteClockTest PRIVATE /UNDEBUG)
+    target_link_libraries(IgniteClockTest PRIVATE winmm)
+endif()

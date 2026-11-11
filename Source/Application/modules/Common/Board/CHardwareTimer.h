@@ -3,6 +3,9 @@
 //#ifdef BUILD_SIMULATOR
 #include <chrono>
 #include <thread>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 //#endif
 #ifdef __linux__
 #include <stdio.h>
@@ -38,11 +41,20 @@ namespace Ignite
             std::thread _thread;
 			void hiResTimerThread(void);
 #endif
+            #ifdef _WIN32
+            std::atomic<uint32_t> _intervalus{0};
+            std::atomic<bool> _running{false}, _activeCB{false};
+            std::mutex _timerMutex;
+            std::condition_variable _timerCv;
+#else
             uint32_t _intervalus = 0;
+#endif
             HardwareTimerCb _callback;
             void* _context;
+            #ifndef _WIN32
             bool _running = false;
             bool _activeCB = false;
+#endif
 #ifdef __linux__
             struct timespec _timepoint;
 #endif

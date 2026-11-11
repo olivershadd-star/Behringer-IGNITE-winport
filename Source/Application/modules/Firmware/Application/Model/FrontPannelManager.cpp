@@ -654,7 +654,9 @@ Module("FrontPannelManager", (moduleId_t)ModuleName::moduleFrontPannel, (unsigne
 	playTribeConMngr = new PlayTribeConnectionManager(this);
 
 	engine.updateModuleReadyStatus((moduleId_t)ModuleName::moduleFrontPannel, true);
-	startThread();
+#if !defined(IGNITE_DESKTOP) || !defined(_WIN32)
+    startThread(); // UART decoder: no MCU exists in the Windows desktop build.
+#endif
 
 	for (uint8_t i = 0; i < (uint8_t)FrontPannelParam::paramKey_End_KeyMapping; i++)
 	{
@@ -823,8 +825,10 @@ void FrontPannelManager::FrontPanneEthernetWatchThreadFunction(void)
 
 void FrontPannelManager::FrontPannelStartThreads(void)
 {
+#if !defined(IGNITE_DESKTOP) || !defined(_WIN32)
 	FrontPannelExternalReadThreadFunctionCB = [](void* context) { static_cast<FrontPannelManager*> (context)->FrontPannelExternalReadThreadFunction(); };
 	FrontPannelExternalReadThread.startThread(FrontPannelExternalReadThreadFunctionCB, this);
+#endif
 	FrontPannelExternalWriteThreadFunctionCB = [](void* context) { static_cast<FrontPannelManager*> (context)->FrontPannelExternalWriteThreadFunction(); };
 	FrontPannelExternalWriteThread.startThread(FrontPannelExternalWriteThreadFunctionCB, this);
 	FrontPannelInternalProcessThreadFunctionCB = [](void* context) { static_cast<FrontPannelManager*> (context)->FrontPannelInternalProcessThreadFunction(); };

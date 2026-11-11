@@ -15,6 +15,13 @@ jobs:
       - name: Compile and package
         shell: pwsh
         run: ./build-windows.ps1
+      - name: Test Windows sequencer clock
+        shell: pwsh
+        run: |
+          cmake --build build/windows --config Release --target IgniteClockTest
+          if ($LASTEXITCODE -ne 0) { throw 'Clock test build failed' }
+          ./Source/Application/Release/IgniteClockTest.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Clock test failed' }
       - name: Launch desktop and capture its virtual front panel
         shell: pwsh
         run: |
