@@ -53,7 +53,7 @@ bool AudioCore::hasPreset(int bank,int program) const {return font && tsf_get_pr
 void AudioCore::prepare(double sampleRate) {
     rate=std::clamp(sampleRate,8000.0,192000.0);
     for(size_t t=0;t<voices.size();++t) if(auto* v=voices[t]) {
-        tsf_set_output(v,TSF_STEREO_INTERLEAVED,static_cast<int>(rate),-8.0f);
+        tsf_set_output(v,TSF_STEREO_INTERLEAVED,static_cast<int>(rate),0.0f);
         tsf_set_max_voices(v,8);
         // Allocate both internal channels before the callback starts.
         for(int ch=0;ch<2;++ch) {tsf_channel_set_bank_preset(v,ch,0,0);tsf_channel_set_volume(v,ch,.85f);}

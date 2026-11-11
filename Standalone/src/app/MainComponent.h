@@ -10,6 +10,11 @@ public:
     std::function<void()> onChooseNote;
     void mouseDown(const juce::MouseEvent& e) override {if(e.mods.isPopupMenu()){if(onChooseNote)onChooseNote();}else juce::TextButton::mouseDown(e);}
 };
+class GrooveLook final : public juce::LookAndFeel_V4 {
+public:
+    juce::Font getTextButtonFont(juce::TextButton& button,int) override {return juce::Font(dynamic_cast<StepButton*>(&button)!=nullptr?11.f:13.f);}
+    juce::Font getComboBoxFont(juce::ComboBox&) override {return juce::Font(13.f);}
+};
 class MainComponent final : public juce::AudioAppComponent,private juce::Timer,private juce::MidiKeyboardState::Listener {
 public:
     explicit MainComponent(bool selfTest);
@@ -40,7 +45,7 @@ private:
     bool testClick(juce::Component&);
     ignite::AudioCore core;
     ignite::Pattern pattern=ignite::makeDemo();
-    juce::LookAndFeel_V4 look;
+    GrooveLook look;
     juce::TextButton play{"PLAY"},stop{"STOP"},demo{"Demo"},clear{"Effacer"},save{"Enregistrer"},load{"Ouvrir"},audio{"Sortie audio"};
     juce::Slider tempo,volume;
     std::array<Row,ignite::trackCount> rows;

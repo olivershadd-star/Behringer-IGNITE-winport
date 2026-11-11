@@ -17,7 +17,17 @@ bool sendWindowsKey(unsigned short key) {
     INPUT events[2]{};events[0].type=events[1].type=INPUT_KEYBOARD;events[0].ki.wVk=events[1].ki.wVk=key;events[1].ki.dwFlags=KEYEVENTF_KEYUP;
     return SendInput(2,events,sizeof(INPUT))==2;
 }
+bool pressWindowsPoint(int x,int y) {
+    const auto width=GetSystemMetrics(SM_CXSCREEN),height=GetSystemMetrics(SM_CYSCREEN);
+    if(width<2||height<2)return false;
+    INPUT events[2]{};events[0].type=INPUT_MOUSE;events[0].mi.dx=static_cast<LONG>((static_cast<double>(x)*65535)/(width-1));events[0].mi.dy=static_cast<LONG>((static_cast<double>(y)*65535)/(height-1));events[0].mi.dwFlags=MOUSEEVENTF_MOVE|MOUSEEVENTF_ABSOLUTE;
+    events[1].type=INPUT_MOUSE;events[1].mi.dwFlags=MOUSEEVENTF_LEFTDOWN;
+    return SendInput(2,events,sizeof(INPUT))==2;
+}
+bool releaseWindowsMouse() {INPUT event{};event.type=INPUT_MOUSE;event.mi.dwFlags=MOUSEEVENTF_LEFTUP;return SendInput(1,&event,sizeof(INPUT))==1;}
 #else
 bool clickWindowsPoint(int,int){return false;}
 bool sendWindowsKey(unsigned short){return false;}
+bool pressWindowsPoint(int,int){return false;}
+bool releaseWindowsMouse(){return false;}
 #endif

@@ -46,7 +46,7 @@ MainComponent::MainComponent(bool selfTest):testing(selfTest) {
         for(const auto& preset:core.presets())if(preset.bank==(t<3?128:0))row.instrument.addItem(juce::String::fromUTF8(preset.name.c_str()),preset.program+1);
         row.instrument.setTooltip(t<3?"Choisir une boite a rythmes":"Choisir un instrument interne");
         row.instrument.onChange=[this,t]{auto& tr=pattern.tracks[static_cast<size_t>(t)];tr.program=rows[static_cast<size_t>(t)].instrument.getSelectedId()-1;sendPattern();message="Instrument : "+rows[static_cast<size_t>(t)].instrument.getText()+". Cliquez Jouer pour l'ecouter.";};
-        for(int n=0;n<128;++n)row.note.addItem(t<3?juce::String(n)+" "+drumName(n):noteName(n),n+1);
+        for(int n=0;n<128;++n)row.note.addItem(t<3?juce::String(n):noteName(n),n+1);
         row.note.setTooltip("Note de la piste. Clic droit sur un pas pour modifier sa note seule.");
         row.note.onChange=[this,t]{auto& tr=pattern.tracks[static_cast<size_t>(t)];tr.note=rows[static_cast<size_t>(t)].note.getSelectedId()-1;for(auto& s:tr.steps)s.note=static_cast<uint8_t>(tr.note);sendPattern();syncControls();};
         for(auto* c:std::initializer_list<juce::Component*>{&row.select,&row.instrument,&row.note,&row.preview,&row.mute})addAndMakeVisible(c);
@@ -57,7 +57,7 @@ MainComponent::MainComponent(bool selfTest):testing(selfTest) {
             button.onChooseNote=[this,t,s]{chooseNote(t,s);};
         }
     }
-    keyboardState.addListener(this);addAndMakeVisible(keyboard);keyboard.setAvailableRange(36,96);keyboard.setLowestVisibleKey(48);keyboard.setKeyWidth(21);
+    keyboardState.addListener(this);addAndMakeVisible(keyboard);keyboard.setOctaveForMiddleC(4);keyboard.setAvailableRange(36,96);keyboard.setLowestVisibleKey(48);keyboard.setKeyWidth(21);
     for(auto* label:{&status,&hint}){label->setColour(juce::Label::textColourId,text);label->setFont(juce::Font(12));addAndMakeVisible(label);}
     hint.setText("Clic sur les pas : on/off. Clic droit : note du pas. Selectionnez une piste pour jouer au clavier.",juce::dontSendNotification);
     syncControls();sendPattern();
@@ -175,10 +175,18 @@ void MainComponent::testTick() {
     case 9:if(stageTicks>20){
         if(callbackEnergy.load()-checkpointEnergy<.01){testFinish(false,"Instrument preview click was silent");return;}
         const auto file=juce::File::getCurrentWorkingDirectory().getChildFile("standalone-test-pattern.json");file.replaceWithText(encodePattern(pattern));ignite::Pattern loaded;juce::String error;
-        if(!decodePattern(file.loadFileAsString(),core,loaded,error)||encodePattern(loaded)!=encodePattern(pattern)||decodePattern("{}",core,loaded,error)){testFinish(false,"Pattern save/load validation failed");return;}next();
+        if(!decodePattern(file.loadFileAsString(),core,loaded,error)||encodePattern(loaded)!=encodePattern(pattern)||decodePattern("{}",core,loaded,error)){testFinish(false,"Pattern save/load validation failed");return;}click(stop);
     }break;
-    case 10:click(demo);break;
-    case 11:if(stageTicks>6){if(enabledSteps(pattern)<20){testFinish(false,"Demo click did not restore a playable groove");return;}click(play);}break;
-    case 12:if(stageTicks>45){capture("standalone-ui-demo.png");testFinish(true,"Native Windows clicks: demo PLAY/STOP, clear, create a kick step and play it, select another instrument, audition it, restore demo; JSON file round-trip and invalid-file rejection.");}break;
+    case 10:if(stageTicks>12)click(rows[5].select);break;
+    case 11:if(stageTicks>6){
+        if(selectedTrack!=5||core.peak()>.001f){testFinish(false,"Track selection or stop failed before keyboard test");return;}
+        checkpointEnergy=callbackEnergy.load();const auto point=keyboard.localPointToGlobal(keyboard.getRectangleForKey(72).getCentre().toInt());
+        if(!pressWindowsPoint(point.x,point.y)){testFinish(false,"Keyboard mouse press rejected");return;}next();
+    }break;
+    case 12:if(stageTicks>9){capture("standalone-ui-keyboard.png");releaseWindowsMouse();if(callbackEnergy.load()-checkpointEnergy<.01){testFinish(false,"Playing the on-screen keyboard produced no audio");return;}next();}break;
+    case 13:if(stageTicks>12)click(stop);break;
+    case 14:if(stageTicks>12){if(core.peak()>.001f){testFinish(false,"Keyboard note did not stop");return;}click(demo);}break;
+    case 15:if(stageTicks>6){if(enabledSteps(pattern)<20){testFinish(false,"Demo click did not restore a playable groove");return;}click(play);}break;
+    case 16:if(stageTicks>45){capture("standalone-ui-demo.png");testFinish(true,"Native Windows clicks: demo PLAY/STOP, clear, create a kick step and play it, select another instrument, audition it, select Lead and play/release the on-screen keyboard, restore demo; JSON file round-trip and invalid-file rejection.");}break;
     }
 }
