@@ -1,9 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
+#include <exception>
 // Test-only automation of the existing JUCE buttons. No alternative interface.
 class OriginalUiSmoke final : private juce::Timer {
 public:
-    static void start(Ignite::IgniteEngine& engine) { (new OriginalUiSmoke(engine))->startTimer(500); }
+    static void start(Ignite::IgniteEngine& engine) {
+        std::set_terminate([] {
+            juce::String reason = "Unhandled C++ exception";
+            if (auto error = std::current_exception()) {
+                try { std::rethrow_exception(error); }
+                catch (const std::exception& exception) { reason += ": " + juce::String(exception.what()); }
+                catch (...) {}
+            }
+            juce::File::getCurrentWorkingDirectory().getChildFile("original-ui-progress.txt").appendText(reason + "\n");
+            std::_Exit(4);
+        });
+        (new OriginalUiSmoke(engine))->startTimer(500);
+    }
 private:
     explicit OriginalUiSmoke(Ignite::IgniteEngine& engineIn) : engine(engineIn), initialCount(engineIn.instrumentManager->getInstrumentCount()) {}
     juce::Button* find(juce::Component& root, const juce::String& id) {
@@ -13,7 +26,12 @@ private:
         return nullptr;
     }
     bool click(const juce::String& id) {
-        if (auto* button = find(ui::getAppHome(), id)) { button->triggerClick(); return true; }
+        if (auto* button = find(ui::getAppHome(), id)) {
+            juce::File::getCurrentWorkingDirectory().getChildFile("original-ui-progress.txt")
+                .appendText("stage=" + juce::String(stage) + " click=" + id + "\n");
+            capture("original-ui-before-click.png");
+            button->triggerClick(); return true;
+        }
         return false;
     }
     bool capture(const juce::String& name) {

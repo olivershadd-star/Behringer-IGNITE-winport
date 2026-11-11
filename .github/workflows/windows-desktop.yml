@@ -22,7 +22,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Clock test build failed' }
           ./Source/Application/Release/IgniteClockTest.exe
           if ($LASTEXITCODE -ne 0) { throw 'Clock test failed' }
-      - name: Launch desktop and capture its virtual front panel
+      - name: Launch original desktop and test sequencer audio
         shell: pwsh
         run: |
           $app = Start-Process -FilePath ./dist/Ignite-Windows-x64/Ignite.exe -ArgumentList '--desktop-smoke' -WorkingDirectory $PWD -PassThru
@@ -44,6 +44,8 @@ jobs:
             original-ui-test.txt
             original-ui-presets.png
             original-ui-final.png
+            original-ui-progress.txt
+            original-ui-before-click.png
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
