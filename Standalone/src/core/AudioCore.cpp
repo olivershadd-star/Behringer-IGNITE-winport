@@ -37,8 +37,11 @@ bool AudioCore::loadSoundFont(const std::filesystem::path& path) {
     std::ifstream in(path,std::ios::binary);
     if(!in) return false;
     const std::vector<char> bytes((std::istreambuf_iterator<char>(in)),{});
-    if(bytes.empty() || bytes.size()>512u*1024u*1024u) return false;
-    font=tsf_load_memory(bytes.data(),static_cast<int>(bytes.size()));
+    return loadSoundFontMemory(bytes.data(),bytes.size());
+}
+bool AudioCore::loadSoundFontMemory(const void* data,size_t size) {
+    if(font||data==nullptr||size==0||size>512u*1024u*1024u)return false;
+    font=tsf_load_memory(data,static_cast<int>(size));
     if(!font) return false;
     for(int bank:{0,128}) for(int program=0;program<128;++program)
         if(auto* name=tsf_bank_get_presetname(font,bank,program)) catalog.push_back({bank,program,name});

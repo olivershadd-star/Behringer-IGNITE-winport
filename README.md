@@ -1,20 +1,14 @@
-# IGNITE — reprise du standalone Windows
+# IGNITE Core Desktop — premiere tranche Windows
 
-Le precedent portage est retire de la version proposee. Le travail reprend dans [`Standalone/`](Standalone/README.md), une cible JUCE autonome qui ne compile pas l'ancienne interface ni les services du materiel Linux.
+La cible actuelle est [`Desktop/`](Desktop/README.md). Elle utilise les classes originales **Pattern, Bar, Step et SequenceManager**, le synthetiseur TSF et les traitements d'effets extraits de **Track**. Les commandes physiques deviennent une grille de notes et des controles JUCE utilisables a la souris, sans machine IGNITE ni ports MIDI externes.
 
-Premiere etape : six pistes de batterie et d'instruments internes, un pattern de seize pas, un clavier, un choix de sons et un transport independants de toute machine IGNITE. La banque GeneralUser GS est fournie comme remplacement, avec sa licence. Le synthetiseur provient du ZIP source d'IGNITE ; ce premier modele de sequenceur est simple et nouveau.
+**Lancer `IgniteCoreDesktop.exe`, puis Lecture.** La banque de sons est integree. Pour une boite a rythmes, choisir un son `Batterie`, puis `Charger une demo`. Cliquer les cases ajoute/retire les notes du vrai pattern. Stop, ecoute d'un son, tempo, filtre, resonance, reverb et volume sont actifs.
 
-[Compilation et tests de la nouvelle base](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/workflows/standalone-windows.yml) · [Utilisation et limites](Standalone/README.md)
+[Executable et rapports Windows](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/workflows/original-desktop-windows.yml?query=branch%3Acore%2Fpattern-model) · [Utilisation, compilation et limites](Desktop/README.md) · [Separation du coeur original](DesktopCore/README.md)
 
-[Telecharger IGNITE Standalone 0.1 pour Windows x64](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/43035665513/artifacts/13862828059)
+Portee de cette premiere tranche : **un instrument ou kit, un pattern de seize pas**. Les scenes, l'arrangement, la sauvegarde des projets et les fonctions avancees de piste restent a porter. Les tests verifient le modele original, ses evenements, le rendu PCM, les effets et les vrais clics Windows. Le serveur CI sans carte son ne valide pas une ecoute sur le PC physique de l'utilisateur.
 
-Un ZIP, cinq fichiers : extraire une seule fois puis lancer **IgniteStandalone.exe** et cliquer **PLAY**. La demonstration est prete. Les anciennes archives `Ignite-Windows-x64` concernent le prototype refuse.
-
-![Nouvelle groovebox Windows en lecture](docs/standalone/windows-demo.png)
-
-Le [run Windows 43035665513](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/43035665513), code `7969cd8a`, passe les tests du coeur et les clics/touches Windows SendInput : PLAY/STOP, effacer, creer un pas, changer un instrument, l'ecouter, selectionner Lead et tenir/relacher une touche du clavier. Le signal du callback est enregistre et analyse. Les fichiers JSON passent un aller-retour d'enregistrement/lecture et un fichier invalide est refuse. La carte son physique de l'utilisateur reste a verifier.
-
-[Rapport interface](docs/standalone/windows-ui-test.txt) · [Rapport moteur](docs/standalone/windows-core-tests.txt) · [Rendu WAV de la demo](docs/standalone/demo-engine.wav) · [Clavier pendant une note](docs/standalone/windows-keyboard.png)
+Le dossier `Standalone/` contient l'ancien prototype a sequenceur reecrit ; il est conserve comme reference technique et ne constitue plus la cible proposee. Utiliser **IgniteCoreDesktop.exe**.
 
 ---
 

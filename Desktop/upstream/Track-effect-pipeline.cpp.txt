@@ -1,0 +1,39 @@
+for (auto index = 0; index < AUDIO_EFFECT_MAX; index++)
+	{
+		switch (audioEffectsOrder[index])// execute the effects in the order user requested
+		{
+		case AUDIO_REVERB:
+		{
+			if (theReverbParameters.width != 0)
+			{
+				igniteReverb.processMono(_twentyMsBuffer, INTERNAL_AUDIO_20MS_BLOCK_SIZE);
+			}
+		}
+		break;
+
+		case AUDIO_CHORUS:
+			if (chorusStatus[1] == true)
+				_Chorus[0].process(buffer);
+			break;
+		case AUDIO_EQ_L:
+		{
+			if (EQisEnabled[FILTER_HIGHEQ_INDEX])
+				eqFilter[FILTER_HIGHEQ_INDEX].process(buffer);
+		}
+		break;
+		case AUDIO_EQ_H:
+		{
+			if (EQisEnabled[FILTER_LOWEQ_INDEX])
+				eqFilter[FILTER_LOWEQ_INDEX].process(buffer);
+		}
+		break;
+		case AUDIO_FILTER:
+		{
+			filter.process(buffer);
+		}
+		break;
+		default:
+			break;
+		}
+	}
+trackGain.process(buffer);

@@ -3,6 +3,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include "../core/AudioCore.h"
+#include "WindowsAudioOutput.h"
 #include <thread>
 
 class StepButton : public juce::TextButton {
@@ -15,9 +16,9 @@ public:
     juce::Font getTextButtonFont(juce::TextButton& button,int) override {return juce::Font(dynamic_cast<StepButton*>(&button)!=nullptr?11.f:13.f);}
     juce::Font getComboBoxFont(juce::ComboBox&) override {return juce::Font(13.f);}
 };
-class MainComponent final : public juce::AudioAppComponent,private juce::Timer,private juce::MidiKeyboardState::Listener {
+class MainComponent final : public juce::Component,public juce::AudioSource,private juce::Timer,private juce::MidiKeyboardState::Listener {
 public:
-    explicit MainComponent(bool selfTest);
+    explicit MainComponent(bool selfTest,bool startupCheck=false);
     ~MainComponent() override;
     void prepareToPlay(int,double) override;
     void getNextAudioBlock(const juce::AudioSourceChannelInfo&) override;
@@ -37,6 +38,7 @@ private:
     void sendPattern();
     void chooseNote(int track,int step);
     void openAudio();
+    void startOutput(unsigned device=WindowsAudioOutput::defaultDevice);
     void savePattern();
     void loadPattern();
     void capture(const juce::String& file);
@@ -44,6 +46,7 @@ private:
     void testFinish(bool,const juce::String&);
     bool testClick(juce::Component&);
     ignite::AudioCore core;
+    WindowsAudioOutput output;
     ignite::Pattern pattern=ignite::makeDemo();
     GrooveLook look;
     juce::TextButton play{"PLAY"},stop{"STOP"},demo{"Demo"},clear{"Effacer"},save{"Enregistrer"},load{"Ouvrir"},audio{"Sortie audio"};
@@ -53,7 +56,11 @@ private:
     juce::MidiKeyboardComponent keyboard{keyboardState,juce::MidiKeyboardComponent::horizontalKeyboard};
     juce::Label status,hint;
     std::unique_ptr<juce::FileChooser> chooser;
-    bool testing=false,bankLoaded=false;
+    bool testing=false,bankLoaded=false,checkingStartup=false;
+    unsigned selectedDevice=WindowsAudioOutput::defaultDevice;
+    int startupTicks=0;
+    int stalledTicks=0;
+    bool loggedCallback=false,loggedStall=false;
     int selectedTrack=4,highlight=-1;
     std::array<int,128> keyboardOwners{};
     std::array<float,2048> monoScratch{};

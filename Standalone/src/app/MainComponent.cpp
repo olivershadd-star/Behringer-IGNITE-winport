@@ -2,6 +2,7 @@
 #include "MainComponent.h"
 #include "PatternFile.h"
 #include "WindowsInput.h"
+#include "EmbeddedBank.h"
 #include <algorithm>
 #include <cmath>
 
@@ -15,7 +16,7 @@ juce::String drumName(int note) {
 int enabledSteps(const ignite::Pattern& p){int count=0;for(const auto& tr:p.tracks)for(const auto& s:tr.steps)if(s.enabled)++count;return count;}
 }
 
-MainComponent::MainComponent(bool selfTest):testing(selfTest) {
+MainComponent::MainComponent(bool selfTest,bool startupCheck):testing(selfTest),checkingStartup(startupCheck) {
     keyboardOwners.fill(-1);
     look.setColour(juce::ResizableWindow::backgroundColourId,background);
     look.setColour(juce::TextButton::buttonColourId,panel);look.setColour(juce::TextButton::buttonOnColourId,amber.darker(.4f));
@@ -24,12 +25,13 @@ MainComponent::MainComponent(bool selfTest):testing(selfTest) {
     look.setColour(juce::PopupMenu::backgroundColourId,panel);look.setColour(juce::PopupMenu::textColourId,text);
     look.setColour(juce::Slider::thumbColourId,amber);look.setColour(juce::Slider::trackColourId,blue);
     setLookAndFeel(&look);setSize(1040,610);
-    const auto bank=juce::File::getSpecialLocation(juce::File::currentExecutableFile).getSiblingFile("Ignite.sf2");
-    bankLoaded=core.loadSoundFont(std::filesystem::u8path(bank.getFullPathName().toStdString()));
-    if(!bankLoaded)message="Banque Ignite.sf2 absente ou illisible : conserver tous les fichiers du ZIP ensemble.";
+    const auto bank=getEmbeddedBank();
+    bankLoaded=core.loadSoundFontMemory(bank.data,bank.size);
+    if(!bankLoaded)message="ERREUR : impossible de charger les sons integres a l'application.";
+    juce::Logger::writeToLog("Embedded soundbank: "+juce::String(static_cast<juce::int64>(bank.size))+" bytes; loaded="+juce::String(bankLoaded?1:0)+"; presets="+juce::String(static_cast<int>(core.presets().size())));
     for(auto* button:{&play,&stop,&demo,&clear,&save,&load,&audio})addAndMakeVisible(button);
     play.setColour(juce::TextButton::buttonColourId,juce::Colour(0xff176e50));play.setColour(juce::TextButton::buttonOnColourId,juce::Colour(0xff22a16e));
-    play.onClick=[this]{if(!bankLoaded)return;if(!testing&&deviceManager.getCurrentAudioDevice()==nullptr){message="Choisissez une sortie audio Windows.";openAudio();return;}if(enabledSteps(pattern)==0){message="Pattern vide : activez des pas ou chargez Demo.";return;}core.play();message="Lecture du pattern.";};
+    play.onClick=[this]{if(!bankLoaded)return;if(!testing&&(!output.active()||stalledTicks>30))startOutput(selectedDevice);if(!testing&&!output.active()){message="Impossible de demarrer la sortie Windows. Cliquez Sortie audio.";return;}if(enabledSteps(pattern)==0){message="Pattern vide : activez des pas ou chargez Demo.";return;}const bool queued=core.play();juce::Logger::writeToLog("PLAY: queued="+juce::String(queued?1:0)+" callbackFrames="+juce::String(static_cast<juce::int64>(callbackFrames.load())));message=queued?"Lecture du pattern.":"ERREUR : commande PLAY refusee.";};
     stop.onClick=[this]{core.stop();keyboardState.allNotesOff(0);message="Arret.";};
     demo.onClick=[this]{core.stop();pattern=ignite::makeDemo();sendPattern();syncControls();message="Demo chargee : appuyez sur PLAY.";};
     clear.onClick=[this]{core.stop();for(auto& tr:pattern.tracks)for(auto& s:tr.steps)s.enabled=false;sendPattern();syncControls();message="Pattern vide : cliquez sur les pas pour le construire.";};
@@ -41,7 +43,7 @@ MainComponent::MainComponent(bool selfTest):testing(selfTest) {
         auto& row=rows[static_cast<size_t>(t)];
         row.select.setButtonText(trackNames[t]);row.select.setTooltip("Selectionner cette piste pour le clavier");
         row.select.onClick=[this,t]{keyboardState.allNotesOff(0);selectedTrack=t;syncControls();message=juce::String(trackNames[t])+" selectionne pour le clavier.";};
-        row.preview.setButtonText("Jouer");row.preview.setTooltip("Ecouter le son de cette piste");row.preview.onClick=[this,t]{if(!bankLoaded)return;if(!testing&&deviceManager.getCurrentAudioDevice()==nullptr){openAudio();return;}core.audition(t,pattern.tracks[static_cast<size_t>(t)].note);message="Ecoute : "+rows[static_cast<size_t>(t)].instrument.getText();};
+        row.preview.setButtonText("Jouer");row.preview.setTooltip("Ecouter le son de cette piste");row.preview.onClick=[this,t]{if(!bankLoaded)return;if(!testing&&!output.active())startOutput(selectedDevice);if(!testing&&!output.active())return;core.audition(t,pattern.tracks[static_cast<size_t>(t)].note);message="Ecoute : "+rows[static_cast<size_t>(t)].instrument.getText();};
         row.mute.setButtonText("M");row.mute.setClickingTogglesState(true);row.mute.setTooltip("Couper cette piste");row.mute.onClick=[this,t]{pattern.tracks[static_cast<size_t>(t)].muted=rows[static_cast<size_t>(t)].mute.getToggleState();sendPattern();};
         for(const auto& preset:core.presets())if(preset.bank==(t<3?128:0))row.instrument.addItem(juce::String::fromUTF8(preset.name.c_str()),preset.program+1);
         row.instrument.setTooltip(t<3?"Choisir une boite a rythmes":"Choisir un instrument interne");
@@ -64,10 +66,10 @@ MainComponent::MainComponent(bool selfTest):testing(selfTest) {
     if(testing&&bankLoaded) {
         recording.resize(48000u*20u*2u);prepareToPlay(256,48000);renderTest.store(true);
         testAudio=std::thread([this]{juce::AudioBuffer<float> b(2,256);while(renderTest.load()){getNextAudioBlock({&b,0,256});std::this_thread::sleep_for(std::chrono::milliseconds(5));}});
-    } else if(bankLoaded) setAudioChannels(0,2);
+    } else if(bankLoaded) startOutput();
     startTimerHz(30);
 }
-MainComponent::~MainComponent(){stopTimer();renderTest.store(false);if(testAudio.joinable())testAudio.join();shutdownAudio();keyboardState.removeListener(this);setLookAndFeel(nullptr);}
+MainComponent::~MainComponent(){stopTimer();renderTest.store(false);if(testAudio.joinable())testAudio.join();output.stop();keyboardState.removeListener(this);setLookAndFeel(nullptr);}
 void MainComponent::sendPattern(){if(!core.setPattern(pattern))message="Commandes trop rapides : lecture arretee, recommencez.";}
 void MainComponent::syncControls() {
     tempo.setValue(pattern.bpm,juce::dontSendNotification);
@@ -95,11 +97,11 @@ void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& info) 
     }
     callbackEnergy.store(accumulatedEnergy);callbackFrames.fetch_add(static_cast<uint64_t>(info.numSamples));
 }
-void MainComponent::handleNoteOn(juce::MidiKeyboardState*,int,int note,float velocity){if(!bankLoaded||(!testing&&deviceManager.getCurrentAudioDevice()==nullptr))return;keyboardOwners[static_cast<size_t>(note)]=selectedTrack;core.noteOn(selectedTrack,note,velocity);}
+void MainComponent::handleNoteOn(juce::MidiKeyboardState*,int,int note,float velocity){if(!bankLoaded||(!testing&&!output.active()))return;keyboardOwners[static_cast<size_t>(note)]=selectedTrack;core.noteOn(selectedTrack,note,velocity);}
 void MainComponent::handleNoteOff(juce::MidiKeyboardState*,int,int note,float){const auto t=keyboardOwners[static_cast<size_t>(note)];if(t>=0)core.noteOff(t,note);keyboardOwners[static_cast<size_t>(note)]=-1;}
 void MainComponent::paint(juce::Graphics& g) {
     g.fillAll(background);g.setColour(text);g.setFont(juce::Font(29,juce::Font::bold));g.drawText("IGNITE",12,6,150,36,juce::Justification::centredLeft);
-    g.setColour(blue);g.setFont(13);g.drawText("GROOVEBOX  /  STANDALONE 0.1",160,12,320,28,juce::Justification::centredLeft);
+    g.setColour(blue);g.setFont(13);g.drawText("GROOVEBOX  /  STANDALONE 0.1.1",160,12,320,28,juce::Justification::centredLeft);
     g.setColour(text.withAlpha(.7f));g.setFont(11);g.drawText("BPM",562,50,32,30,juce::Justification::centred);g.drawText("VOL",730,50,32,30,juce::Justification::centred);
     const int top=112,rowHeight=(getHeight()-252)/6;
     g.setColour(text.withAlpha(.55f));g.drawText("PISTE",12,87,64,20,juce::Justification::centredLeft);g.drawText("INSTRUMENT / KIT",84,87,155,20,juce::Justification::centredLeft);g.drawText("NOTE",244,87,64,20,juce::Justification::centred);
@@ -118,11 +120,32 @@ void MainComponent::resized() {
 }
 void MainComponent::timerCallback() {
     const auto head=core.playhead();if(highlight!=head){highlight=head;syncControls();}play.setToggleState(head>=0,juce::dontSendNotification);
-    juce::String output;
-    if(testing)output="Verification audio sans carte son";
-    else if(auto* device=deviceManager.getCurrentAudioDevice())output=device->getName()+" / "+juce::String(deviceRate.load(),0)+" Hz";
-    else output="Aucune sortie audio : cliquez Sortie audio";
-    status.setText(message+"  |  "+output,juce::dontSendNotification);repaint();if(testing)testTick();
+    const auto frames=callbackFrames.load();
+    if(!testing){
+        if(frames==checkpointFrames)++stalledTicks;else stalledTicks=0;
+        checkpointFrames=frames;
+        if(frames>0&&!loggedCallback){loggedCallback=true;juce::Logger::writeToLog("Windows PCM renderer started; frames="+juce::String(static_cast<juce::int64>(frames)));}
+        if(output.running()&&stalledTicks>30&&!loggedStall){loggedStall=true;juce::Logger::writeToLog("ERROR: audio driver stopped consuming buffers");}
+    }
+    juce::String description;
+    if(!bankLoaded)description=message;
+    else if(testing)description=message+" | Verification audio sans carte son";
+    else if(output.error()!=0)description="AUDIO BLOQUE : "+juce::String(output.errorText().c_str())+" | Sortie audio pour choisir un autre peripherique.";
+    else if(stalledTicks>30&&output.running())description="AUDIO BLOQUE : le pilote ne consomme plus les tampons. Cliquez PLAY pour reessayer ou Sortie audio.";
+    else if(output.active())description=message+" | "+juce::String(output.deviceName().c_str())+" / 48000 Hz";
+    else description="Sortie audio arretee : cliquez PLAY ou Sortie audio.";
+    const bool fault=!bankLoaded||(!testing&&(output.error()!=0||(stalledTicks>30&&output.running())));
+    status.setColour(juce::Label::textColourId,fault?juce::Colours::orange:text);status.setText(description,juce::dontSendNotification);status.setTooltip(description);repaint();
+    if(checkingStartup&&++startupTicks>=30){
+        const bool consuming=output.running()&&frames>2048;
+        const bool unavailable=output.error()!=0;
+        if((bankLoaded&&(consuming||unavailable))||startupTicks>90){
+            const bool ok=bankLoaded&&(consuming||unavailable);
+            juce::File::getCurrentWorkingDirectory().getChildFile("standalone-startup-check.txt").replaceWithText(juce::String(ok?"PASS: ":"FAIL: ")+(consuming?"DRIVER_CONSUMING_PCM":unavailable?"AUDIO_UNAVAILABLE_REPORTED":"STARTUP_STALLED")+"\nembeddedBank="+juce::String(bankLoaded?1:0)+" frames="+juce::String(static_cast<juce::int64>(frames))+" error="+juce::String(output.error())+"\n"+description+"\n");
+            capture("standalone-startup.png");stopTimer();juce::JUCEApplication::getInstance()->setApplicationReturnValue(ok?0:1);juce::JUCEApplication::getInstance()->quit();return;
+        }
+    }
+    if(testing)testTick();
 }
 void MainComponent::chooseNote(int t,int s) {
     juce::PopupMenu menu;
@@ -131,8 +154,16 @@ void MainComponent::chooseNote(int t,int s) {
     menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&rows[static_cast<size_t>(t)].steps[static_cast<size_t>(s)]),[safe,t,s](int id){if(!safe||id<=0)return;auto& step=safe->pattern.tracks[static_cast<size_t>(t)].steps[static_cast<size_t>(s)];step.note=static_cast<uint8_t>(id-1);step.enabled=true;safe->sendPattern();safe->syncControls();});
 }
 void MainComponent::openAudio() {
-    auto selector=std::make_unique<juce::AudioDeviceSelectorComponent>(deviceManager,0,0,0,2,false,false,true,false);selector->setSize(500,420);
-    juce::DialogWindow::LaunchOptions options;options.content.setOwned(selector.release());options.dialogTitle="Sortie audio Windows";options.dialogBackgroundColour=background;options.useNativeTitleBar=true;options.escapeKeyTriggersCloseButton=true;options.launchAsync();
+    juce::PopupMenu menu;menu.addItem(1,"Sortie Windows par defaut",true,selectedDevice==WindowsAudioOutput::defaultDevice);
+    for(const auto& item:WindowsAudioOutput::devices())menu.addItem(static_cast<int>(item.first)+2,juce::String(item.second.c_str()),true,selectedDevice==item.first);
+    juce::Component::SafePointer<MainComponent> safe(this);
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&audio),[safe](int id){if(!safe||id<=0)return;safe->startOutput(id==1?WindowsAudioOutput::defaultDevice:static_cast<unsigned>(id-2));});
+}
+void MainComponent::startOutput(unsigned device) {
+    output.stop();core.stop();selectedDevice=device;stalledTicks=0;loggedCallback=false;loggedStall=false;checkpointFrames=callbackFrames.load();
+    const bool opened=output.start([this](double rate){prepareToPlay(512,rate);},[this](float* l,float* r,int frames){float* channels[]={l,r};juce::AudioBuffer<float> buffer(channels,2,frames);getNextAudioBlock({&buffer,0,frames});},device);
+    juce::Logger::writeToLog("WinMM open: device="+juce::String(device)+" opened="+juce::String(opened?1:0)+" error="+juce::String(output.error())+" "+juce::String(output.errorText().c_str()));
+    message=opened?"Sortie Windows ouverte. Appuyez sur PLAY.":"Impossible d'ouvrir la sortie Windows.";
 }
 void MainComponent::savePattern() {
     chooser=std::make_unique<juce::FileChooser>("Enregistrer le pattern",juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Ignite-pattern.json"),"*.json");

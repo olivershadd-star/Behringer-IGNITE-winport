@@ -30,6 +30,7 @@ public:
     AudioCore(const AudioCore&) = delete;
     AudioCore& operator=(const AudioCore&) = delete;
     bool loadSoundFont(const std::filesystem::path& path);
+    bool loadSoundFontMemory(const void* data, size_t size);
     void prepare(double sampleRate);
     bool setPattern(const Pattern&);
     bool play();

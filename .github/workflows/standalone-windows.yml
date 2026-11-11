@@ -28,18 +28,28 @@ jobs:
       - name: Test actual Windows mouse and keyboard input through the app audio callback
         shell: pwsh
         run: |
-          $exe = Join-Path $PWD 'build/standalone/IgniteStandalone_artefacts/Release/IgniteStandalone.exe'
+          $isolated = Join-Path $PWD 'isolated application'
+          New-Item -ItemType Directory -Force $isolated | Out-Null
+          Copy-Item build/standalone/IgniteStandalone_artefacts/Release/IgniteStandalone.exe $isolated
+          $exe = Join-Path $isolated 'IgniteStandalone.exe'
           $app = Start-Process -FilePath $exe -ArgumentList '--ui-self-test' -WorkingDirectory $PWD -PassThru
           if (-not $app.WaitForExit(60000)) { Stop-Process -Id $app.Id -Force; throw 'Native UI workflow timed out' }
           if ($app.ExitCode -ne 0) { throw "Native UI workflow failed: $($app.ExitCode)" }
           Get-Content standalone-ui-test.txt
+      - name: Launch the normal Windows output path from the isolated executable
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'isolated application/IgniteStandalone.exe'
+          $app = Start-Process -FilePath $exe -ArgumentList '--startup-check' -WorkingDirectory $PWD -PassThru
+          if (-not $app.WaitForExit(15000)) { Stop-Process -Id $app.Id -Force; throw 'Normal startup timed out' }
+          if ($app.ExitCode -ne 0) { throw "Normal startup failed: $($app.ExitCode)" }
+          Get-Content standalone-startup-check.txt
       - name: Package one portable directory
         shell: pwsh
         run: |
           $package = 'dist/Ignite-Standalone-Windows'
           New-Item -ItemType Directory -Force $package | Out-Null
           Copy-Item build/standalone/IgniteStandalone_artefacts/Release/IgniteStandalone.exe $package
-          Copy-Item Standalone/resources/Ignite.sf2 $package
           Copy-Item Standalone/resources/GeneralUser-GS-LICENSE.txt $package
           Copy-Item Standalone/README.md $package
           Copy-Item LICENSE $package
@@ -50,6 +60,8 @@ jobs:
           path: |
             standalone-ui-*.png
             standalone-ui-test.txt
+            standalone-startup-check.txt
+            standalone-startup.png
             standalone-ui-audio.wav
             standalone-test-pattern.json
             build/standalone/ignite-demo.wav
