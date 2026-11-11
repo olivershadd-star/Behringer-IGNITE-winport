@@ -11,6 +11,7 @@ Le panneau virtuel ajoute lors du premier portage a ete supprime. Les dessins, d
 - Les dialogues partages restent attaches a la zone de contenu Windows, au lieu d'ouvrir une surface couvrant tout le moniteur. La fenetre de diagnostic FP_TEST_KEYBRD n'est plus activee.
 - F10 ouvre le selecteur JUCE des sorties audio Windows.
 - Le navigateur de presets conserve la categorie et le son selectionnes a sa reouverture ; la famille Strings contient les 16 sons Strings/Ensemble du classement original.
+- Add New selectionne l'instrument ajoute. Le chargement des pistes ne lit que les enregistrements complets effectivement renvoyes par le moteur, meme pour une banque de moins de seize pistes.
 - Les nouveaux instruments utilisent le moteur sonore interne par defaut. Les definitions existantes ne sont pas modifiees.
 - GeneralUser GS 2.0.3 remplace la banque d'origine manquante. Ce n'est pas le son usine d'IGNITE. Licence et attribution sont distribuees avec la banque. Source figee : mrbumpy409/GeneralUser-GS, revision 684543d5e5efaef08d02be50dcda8d552478fa60.
 - Correction de la file de messages pour proteger ses acces entre threads et du premier demarrage des donnees de calibration.
@@ -23,6 +24,10 @@ Le workflow Windows compile puis lance l'application, verifie le chargement de l
 
 ## Validation Windows confirmee
 
-Run GitHub Actions 42967663743 (ancienne presentation) : compilation MSVC x64, test de demarrage/pause/reprise de l'horloge et lecture d'un morceau genere avec une scene, une piste et un pattern. Le mixage hors ligne produit un signal non nul, sans valeur non finie detectee. Le test ne valide pas encore la saisie du pattern a la souris ni une sortie audio physique. Consulter le dernier run pour la validation de l'interface restauree.
+Run GitHub Actions [43027652588](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/43027652588), code `1b2a17ed` : compilation MSVC x64, test de demarrage/pause/reprise de l'horloge et lecture d'un morceau genere avec une scene, une piste et un pattern. Energie du mixage hors ligne : 1672.59099748 ; les pas du sequenceur et de la piste avancent, sans echantillon invalide detecte.
+
+Un second lancement recharge ce projet enregistre puis declenche les callbacks des boutons JUCE d'origine : Instruments > Add New > Preset > Chromatic Percussion > Glockenspiel > Apply. Le moteur recoit le programme GM 9 (numero de protocole commence a zero) sur INSTR3. La reouverture du navigateur conserve categorie et son. Voir la [capture du navigateur](docs/images/windows-original-presets.png) et les rapports dans l'artefact Desktop-screenshot du run.
+
+Le test ne valide pas encore la creation complete d'un morceau par des clics systeme ni une sortie audio physique. La banque fournie reste GeneralUser GS, pas la banque usine.
 
 Les corrections incluent la course au demarrage du timer Windows, la prise en compte des groupes de pistes incomplets (moins de huit ou dernier groupe), l'acces hors limites au statut du chorus, la serialisation des commandes SoundFont avec le rendu et la suppression des boucles de sondage MCU sans materiel.

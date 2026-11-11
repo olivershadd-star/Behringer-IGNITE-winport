@@ -4,9 +4,9 @@ Adaptation du sequençeur Behringer IGNITE pour fonctionner sans la machine phy
 
 [Compilation et tests Windows](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/workflows/windows-desktop.yml) · [Guide Windows](WINDOWS-FR.md) · [Architecture du portage](PORTAGE-WINDOWS.md)
 
-Les compilations telechargeables figurent dans les runs reussis du workflow ci-dessus. La restauration de l'interface d'origine est en cours de validation ; l'artefact du run 42967663743 utilise encore l'ancien panneau.
+[Telecharger la version Windows avec l'interface d'origine](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/43027652588/artifacts/13859975282) · [Voir le navigateur de presets](docs/images/windows-original-presets.png).
 
-Le workflow produit un seul ZIP contenant directement `Ignite.exe`, `assets/` et `Ignite.sf2`. Les anciennes archives du premier prototype ne sont pas la version actuelle. La compilation Windows, le lancement, l'horloge (demarrage/pause/reprise) et la lecture du sequenceur avec mixage hors ligne ont reussi dans le [run 42967663743](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/42967663743). Le signal mesure est non nul et sans valeur invalide detectee. L'utilisation complete a la souris et la sortie audio physique restent a valider.
+Le workflow produit un seul ZIP contenant directement `Ignite.exe`, `assets/` et `Ignite.sf2`, sans archive imbriquee. Le [run 43027652588](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/43027652588) valide la compilation Windows, l'horloge, le rendu audio hors ligne du sequenceur, le redemarrage avec un projet enregistre et les callbacks des boutons Instruments > Add New > Preset > categorie > son > Apply. Le test verifie le programme recu par le moteur et sa selection a la reouverture du navigateur. La saisie complete d'un morceau a la souris et la sortie sur une carte son physique restent a valider.
 
 ---
 

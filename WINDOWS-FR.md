@@ -12,7 +12,7 @@ La banque GeneralUser GS de S. Christian Collins est incluse avec sa licence. El
 
 Les ecrans Menu, Song, Scene, Track, Pattern, les boutons de transport et le navigateur de presets proviennent de `Source/Application/modules/ignite_ui`. Le panneau de commandes ajoute dans le premier portage a ete retire. Les dialogues d'origine restent dans la fenetre de l'application.
 
-Pour choisir un son : Menu > Instruments > Add New > Preset, choisir une categorie puis un son et Apply. Les nouveaux instruments utilisent les sons internes par defaut. Pour une definition ancienne, activer Internal Sound dans ses reglages. F10 ouvre le choix de la sortie audio Windows ; choisir 48000 Hz.
+Pour choisir un son : Menu > Instruments > Add New > Preset, choisir une categorie puis un son et Apply. Enregistrer avec le bouton Save pour conserver les changements si Autosave est desactive. Les nouveaux instruments utilisent les sons internes par defaut. Pour une definition ancienne, activer Internal Sound dans ses reglages. F10 ouvre le choix de la sortie audio Windows ; choisir 48000 Hz.
 
 ## Compiler
 
