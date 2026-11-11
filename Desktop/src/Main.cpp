@@ -12,16 +12,18 @@
 #include <atomic>
 #include <cmath>
 
+static juce::String utf8(const char* text) { return juce::String::fromUTF8(text); }
+
 class Editor final : public juce::Component,private juce::Timer,private Ignite::SequenceHost {
 public:
     explicit Editor(bool test,bool startup):pattern(0,"Pattern 1",0,Ignite::TimeBase::Base_16,1,false,nullptr),sequence(*this),selfTest(test),startupCheck(startup) {
         setSize(1040,680);
         for(auto* button:{&play,&stop,&preview,&demo,&clear,&retry})addAndMakeVisible(button);
-        play.setButtonText("Lecture");stop.setButtonText("Stop");preview.setButtonText("Écouter le son");demo.setButtonText("Charger une démo");clear.setButtonText("Vider le pattern");retry.setButtonText("Relancer l'audio");
-        addAndMakeVisible(instruments);instruments.setTextWhenNothingSelected("Chargement des sons…");
+        play.setButtonText("Lecture");stop.setButtonText("Stop");preview.setButtonText(utf8("Écouter le son"));demo.setButtonText(utf8("Charger une démo"));clear.setButtonText("Vider le pattern");retry.setButtonText("Relancer l'audio");
+        addAndMakeVisible(instruments);instruments.setTextWhenNothingSelected(utf8("Chargement des sons…"));
         addAndMakeVisible(status);status.setColour(juce::Label::textColourId,juce::Colour(0xffb9cad8));
         slider(tempo,tempoLabel,"Tempo",40,240,1,120);
-        slider(velocity,velocityLabel,"Vélocité",1,127,1,100);
+        slider(velocity,velocityLabel,"Vélocité",1,127,1,100);velocity.setTooltip(utf8("Vélocité des nouvelles notes ajoutées à la grille"));
         slider(cutoff,cutoffLabel,"Filtre · Hz",20,20000,1,20000);cutoff.setSkewFactorFromMidPoint(1000);
         slider(resonance,resonanceLabel,"Résonance · %",0,90,1,10);
         slider(reverb,reverbLabel,"Réverbération · %",0,100,1,0);
@@ -36,7 +38,7 @@ public:
         const auto bank=getEmbeddedBank();loaded=audio.loadBank(bank.data,bank.size);
         if(loaded) {
             instruments.addSectionHeading("Instruments et kits internes");
-            int id=1;for(const auto& preset:audio.presets()) instruments.addItem((preset.bank==128?"Batterie · ":"")+juce::String(preset.name),id++);
+            int id=1;for(const auto& preset:audio.presets()) instruments.addItem((preset.bank==128?utf8("Batterie · "):"")+juce::String::fromUTF8(preset.name.c_str()),id++);
             instruments.setSelectedId(1,juce::dontSendNotification);
             // GeneralUser catalogue order is program order; choose piano.
             selectedBank=0;selectedProgram=0;
@@ -53,13 +55,13 @@ public:
         reverb.onValueChange=[this]{std::lock_guard<std::mutex> lock(audioMutex);effects.setReverbMix(static_cast<float>(reverb.getValue()*0.01));};
         volume.onValueChange=[this]{effect(InternalAudioCC::VOLUME,volume.getValue());};
         if(loaded)loadDemo();
-        if(!selfTest)startDevice();else {deviceReady=true;status.setText("Test hors ligne du cœur original — aucun périphérique audio simulé comme disponible",juce::dontSendNotification);}
+        if(!selfTest)startDevice();else {deviceReady=true;status.setText(utf8("Test hors ligne du cœur original — aucun périphérique audio simulé comme disponible"),juce::dontSendNotification);}
         updateEnabled();startTimerHz(50);
     }
     ~Editor() override {stopTimer();output.stop();audio.setEffects(nullptr);}
     void paint(juce::Graphics& g) override {
         g.fillAll(juce::Colour(0xff141c27));g.setColour(juce::Colour(0xff55dcc0));g.setFont(28);g.drawText("IGNITE",24,12,200,35,juce::Justification::left);
-        g.setFont(15);g.setColour(juce::Colour(0xffc1ccd9));g.drawText("Un instrument · Pattern de 16 pas",220,15,500,30,juce::Justification::left);
+        g.setFont(15);g.setColour(juce::Colour(0xffc1ccd9));g.drawText(utf8("Un instrument · Pattern de 16 pas"),220,15,500,30,juce::Justification::left);
         g.setColour(juce::Colour(0xff1d2938));g.fillRoundedRectangle(18,144,getWidth()-36.0f,340,10);
         g.setColour(juce::Colour(0xffb9cad8));g.setFont(14);g.drawText("Clique une case pour ajouter ou retirer une note. Plusieurs notes peuvent partager un pas.",28,145,getWidth()-56,28,juce::Justification::left);
         const int x=150,w=(getWidth()-174)/16;
@@ -124,9 +126,9 @@ private:
     void effect(InternalAudioCC parameter,double value){std::lock_guard<std::mutex> lock(audioMutex);effects.setInternalAudioEffects(static_cast<uint8_t>(parameter),static_cast<float>(value),false);}
     void startDevice() {
         output.stop();deviceReady=false;
-        if(!loaded){status.setText("Banque interne absente ou illisible : les instruments n'ont pas été chargés.",juce::dontSendNotification);updateEnabled();return;}
+        if(!loaded){status.setText(utf8("Banque interne absente ou illisible : les instruments n'ont pas été chargés."),juce::dontSendNotification);updateEnabled();return;}
         deviceReady=output.start([this,cutoffValue=cutoff.getValue(),resonanceValue=resonance.getValue(),volumeValue=volume.getValue(),reverbValue=reverb.getValue()](double rate){std::lock_guard<std::mutex> lock(audioMutex);audio.prepare(rate);effects.prepare(rate);effects.setInternalAudioEffects(static_cast<uint8_t>(InternalAudioCC::FILTER_CUTOFF),static_cast<float>(cutoffValue),false);effects.setInternalAudioEffects(static_cast<uint8_t>(InternalAudioCC::RESONANCE),static_cast<float>(resonanceValue),false);effects.setInternalAudioEffects(static_cast<uint8_t>(InternalAudioCC::VOLUME),static_cast<float>(volumeValue),false);effects.setReverbMix(static_cast<float>(reverbValue*0.01));running.store(false);},[this](float* l,float* r,int count){render(l,r,count);});
-        status.setText(deviceReady?"Audio Windows en cours d'ouverture…":"Audio Windows indisponible : "+juce::String(output.errorText().c_str()),juce::dontSendNotification);updateEnabled();
+        status.setText(deviceReady?utf8("Audio Windows en cours d'ouverture…"):"Audio Windows indisponible : "+juce::String(output.errorText().c_str()),juce::dontSendNotification);updateEnabled();
     }
     void updateEnabled(){play.setEnabled(loaded&&deviceReady);preview.setEnabled(loaded&&deviceReady);instruments.setEnabled(loaded);}
     void render(float* l,float* r,int count) {
@@ -162,7 +164,7 @@ private:
             if(testTick==92){if(hasNote(0,0)){finishTest(false,"Clear ignored");return;}loadDemo();}
             if(testTick==93){finishTest(true,"Embedded bank, instrument selection/audition, mouse Play/Stop/grid/demo/clear, original Pattern/SequenceManager and original Track effects -> audible piano and drum PCM. Physical sound device not tested.");return;}
         } else {
-            if(output.running()) {deviceReady=true;status.setText("Sortie : "+juce::String(output.deviceName().c_str())+"  ·  "+(running.load()?"Lecture du pattern":"Prêt — choisis un son, puis Lecture"),juce::dontSendNotification);}
+            if(output.running()) {deviceReady=true;status.setText("Sortie : "+juce::String(output.deviceName().c_str())+utf8("  ·  ")+(running.load()?"Lecture du pattern":utf8("Prêt — choisis un son, puis Lecture")),juce::dontSendNotification);}
             else if(output.error()!=0){deviceReady=false;status.setText("Audio Windows indisponible : "+juce::String(output.errorText().c_str()),juce::dontSendNotification);}
             updateEnabled();
             if(startupCheck&&++testTick==75){juce::File::getCurrentWorkingDirectory().getChildFile("original-desktop-startup.txt").replaceWithText(output.running()?"AUDIO_RUNNING\n":"AUDIO_UNAVAILABLE_REPORTED\n"+status.getText());juce::JUCEApplication::getInstance()->quit();}
@@ -187,7 +189,7 @@ public:
 private:
     class Window final : public juce::DocumentWindow {
     public:
-        Window(bool test,bool startup):DocumentWindow("IGNITE — Pattern",juce::Colour(0xff141c27),allButtons){setUsingNativeTitleBar(true);setContentOwned(new Editor(test,startup),true);setResizable(true,false);setResizeLimits(1000,680,1600,1000);centreWithSize(1040,680);setVisible(true);toFront(true);}
+        Window(bool test,bool startup):DocumentWindow(utf8("IGNITE — Pattern"),juce::Colour(0xff141c27),allButtons){setUsingNativeTitleBar(true);setContentOwned(new Editor(test,startup),true);setResizable(true,false);setResizeLimits(1000,680,1600,1000);centreWithSize(1040,680);setVisible(true);toFront(true);}
         void closeButtonPressed() override{juce::JUCEApplication::getInstance()->systemRequestedQuit();}
     };
     std::unique_ptr<Window> window;

@@ -25,7 +25,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
           ctest --test-dir build/core-desktop -C Release --output-on-failure
           if ($LASTEXITCODE -ne 0) { throw 'Core or effect tests failed' }
-      - name: Exercise real Windows mouse input from the isolated EXE
+      - name: Exercise mouse transport, pattern editing, instrument audition and drum kit
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force isolated | Out-Null
@@ -34,6 +34,8 @@ jobs:
           if (-not $app.WaitForExit(60000)) { Stop-Process -Id $app.Id -Force; throw 'UI timed out' }
           Get-Content original-desktop-test.txt
           if ($app.ExitCode -ne 0) { throw 'UI/audio validation failed' }
+          $report = Get-Content original-desktop-test.txt -Raw
+          if ($report -notmatch 'instrument selection/audition') { throw 'Extended instrument/drum validation report missing' }
           $app = Start-Process -FilePath "$PWD/isolated/IgniteCoreDesktop.exe" -ArgumentList '--startup-check' -WorkingDirectory $PWD -PassThru
           if (-not $app.WaitForExit(15000)) { Stop-Process -Id $app.Id -Force; throw 'Startup timed out' }
           Get-Content original-desktop-startup.txt
