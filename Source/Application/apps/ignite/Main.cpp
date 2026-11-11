@@ -34,7 +34,8 @@ std::unique_ptr<IListener> _PUiInterface;
 std::unique_ptr<IDevice> _PUiVirtualEngine;
 extern IDevice* EngineInit(void);
 #if defined(IGNITE_DESKTOP)
-#include "DesktopPanel.h"
+#include <juce_audio_utils/juce_audio_utils.h>
+#include "OriginalUiSmoke.h"
 #endif
 
 //==============================================================================
@@ -125,6 +126,8 @@ public:
 		mainWindow.reset(new MainWindow(getApplicationName()));
 #endif//SHOW_BOOT_IMAGE
 #if defined(IGNITE_DESKTOP)
+        if (commandLine.contains("--original-ui-test"))
+            OriginalUiSmoke::start(*static_cast<IgniteEngine*>(_PUiVirtualEngine.get()));
         if (commandLine.contains("--desktop-smoke"))
             juce::Timer::callAfterDelay(10000, [this] {
                 auto image = mainWindow->getContentComponent()->createComponentSnapshot(mainWindow->getContentComponent()->getLocalBounds());
@@ -213,36 +216,42 @@ public:
 				juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId),
 				DocumentWindow::allButtons)
 		{
-			#if defined(IGNITE_DESKTOP)
-            setContentOwned(new DesktopPanel(*static_cast<IgniteEngine*>(_PUiVirtualEngine.get())), true);
-#else
             setContentOwned(&ui::getAppHome(), true);
-#endif
 			#if defined(IGNITE_DESKTOP)
 			setUsingNativeTitleBar(true);
 #else
 			setUsingNativeTitleBar(false);
 			setTitleBarHeight(0);
 #endif
-			#if defined(IGNITE_DESKTOP)
-            setContentComponentSize(1220, 900);
-            setResizeLimits(854, 630, 1830, 1350);
-            getConstrainer()->setFixedAspectRatio(1220.0 / 900.0);
-            if (auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
-            {
-                const double fit = juce::jmin(1.0, juce::jmin((display->userArea.getWidth() - 40) / 1220.0,
-                    (display->userArea.getHeight() - 80) / 900.0));
-                centreWithSize(static_cast<int>(1220 * fit), static_cast<int>(900 * fit));
-            }
-#else
             setContentComponentSize(ui::layout::screen.getWidth(), ui::layout::screen.getHeight());
-#endif
+            centreWithSize(getWidth(), getHeight());
 #if (JUCE_IOS || JUCE_ANDROID || JUCE_LINUX || __linux__)
 			setFullScreen(true);
 #endif
-			setResizable(true, false);
+			setResizable(false, false);
 			setVisible(true);
 		}
+
+        bool keyPressed(const juce::KeyPress& key) override
+        {
+#if defined(IGNITE_DESKTOP)
+            if (key.getKeyCode() == juce::KeyPress::F10Key) {
+                auto* engine = static_cast<IgniteEngine*>(_PUiVirtualEngine.get());
+                if (engine->songManager->dm == nullptr) return true;
+                auto* selector = new juce::AudioDeviceSelectorComponent(*engine->songManager->dm, 0, 0, 0, 2, false, false, true, false);
+                selector->setSize(520, 450);
+                juce::DialogWindow::LaunchOptions options;
+                options.content.setOwned(selector);
+                options.dialogTitle = "Windows audio output (48000 Hz)";
+                options.dialogBackgroundColour = juce::Colour(0xff202633);
+                options.useNativeTitleBar = true;
+                options.escapeKeyTriggersCloseButton = true;
+                options.launchAsync();
+                return true;
+            }
+#endif
+            return juce::DocumentWindow::keyPressed(key);
+        }
 
 		void closeButtonPressed() override
 		{

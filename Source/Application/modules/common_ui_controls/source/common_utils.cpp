@@ -81,8 +81,22 @@ namespace ui
 			auto display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
 			auto b = display->totalArea;
 
-			setBounds(b);
-			addToDesktop(compPeer::windowIsTemporary | compPeer::windowHasDropShadow);
+#if defined(IGNITE_DESKTOP) && defined(_WIN32)
+            if (auto* owner = dynamic_cast<juce::DocumentWindow*>(juce::TopLevelWindow::getActiveTopLevelWindow())) {
+                if (auto* content = owner->getContentComponent()) {
+                    content->addChildComponent(this);
+                    setBounds(content->getLocalBounds());
+                }
+            }
+            if (getParentComponent() == nullptr) {
+                setBounds(b);
+                addToDesktop(compPeer::windowIsTemporary | compPeer::windowHasDropShadow);
+            }
+#else
+            setBounds(b);
+            addToDesktop(compPeer::windowIsTemporary | compPeer::windowHasDropShadow);
+#endif
+            apply.getProperties().set("automationID", "ignite.dialog.apply");
 		}
 
 		~dialogDisplayer() {

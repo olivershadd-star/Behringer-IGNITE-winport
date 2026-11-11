@@ -97,7 +97,8 @@ namespace ui
 		addAndMakeVisible(presetPgm);
 		presetPgm.addListener(this);
 		presetPgm.setLookAndFeel(EmptyBackgroundLooknFeel::getLnf());
-		xposeButton.setComponentID("programComp");
+		presetPgm.setComponentID("programComp");
+        presetPgm.getProperties().set("automationID", "ignite.presets");
 
 		instrPresetPtr = new InstrumentPreset(instrPtr);
 		instrPresetPtr->setPresetGroup(0);

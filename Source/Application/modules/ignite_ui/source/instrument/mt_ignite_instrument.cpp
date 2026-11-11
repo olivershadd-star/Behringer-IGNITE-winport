@@ -65,6 +65,8 @@ namespace ui
 		instOptCtr->addOptCtlListener(this);
 
 		addNew.makeVisibleAndAddListner(this);
+        addNew.getProperties().set("automationID", "ignite.addInstrument");
+        addNewInList.getProperties().set("automationID", "ignite.addInstrument");
 		addNew.setLookAndFeel(EmptyBackgroundLooknFeel::getLnf());
 		addNew.setColour(juce::TextEditor::outlineColourId, Theme::Instance().getColour(customBlue13));
 		addNew.setColour(TextButton::ColourIds::textColourOffId, Theme::Instance().getColour(customBlue13));

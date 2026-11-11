@@ -1,3 +1,4 @@
+#include "PresetGroups.h"
 /*
  * Copyright (c) - 2024 - MUSIC Tribe, MY.
  * This file is part of IGNITE.
@@ -34,6 +35,8 @@ namespace ui
 		prevPresetGroupButton.makeVisibleAndAddListner(this);
 		nextPresetGroupButton.makeVisibleAndAddListner(this);
 		addAndMakeVisible(&presetGroupButton);
+        presetGroupButton.getProperties().set("automationID", "ignite.preset.group");
+        nextPresetGroupButton.getProperties().set("automationID", "ignite.preset.nextGroup");
 		presetGroupName.addArray({ "Piano", "Chromatic Percussion", "Organ", "Guitar", "Bass", "Strings", "Brass", "Reed",
 						   "Pipe", "Synth Lead", "Synth Pad", "Synth Effects", "Ethnic", "Percussive", "Sound effects", "Drums" });
 
@@ -74,7 +77,8 @@ namespace ui
 		preset15.setLookAndFeel(EmptyBackgroundLooknFeel::getLnf());
 		preset16.setLookAndFeel(EmptyBackgroundLooknFeel::getLnf());
 
-		getAssets();
+		preset2.getProperties().set("automationID", "ignite.preset.second");
+        getAssets();
 		setSize(604, 474);
 	}
 
@@ -273,11 +277,7 @@ namespace ui
 		preset15.setVisible(false);
 		preset16.setVisible(false);
 
-		auto presetIndex = (presetGroup * 8);
-		if (presetGroup == 5)
-			presetIndex = ((presetGroup - 1) * 8) + 8;
-		else if (presetGroup > 5)
-			presetIndex = ((presetGroup) * 8) + 8;
+        const auto presetIndex = PresetGroups::start(presetGroup);
 
 		preset1.setButtonText(mt::Ignite::presetList.at(presetIndex + 0));
 		preset2.setButtonText(mt::Ignite::presetList.at(presetIndex + 1));
@@ -315,11 +315,8 @@ namespace ui
 
 	void InstrumentPreset::sendPreset(int preset, bool sendToEngine)
 	{
-		auto presetIndex = (currentPresetGroup * 8);
-		if (currentPresetGroup > 5)
-			presetIndex = (currentPresetGroup * 8) + 8;
+        const auto presetIndex = PresetGroups::start(currentPresetGroup) + preset + 1;
 
-		presetIndex += preset + 1;
 		DBG("Preset index == " + String(presetIndex));
 
 		if ((int)instrPtr->getInstrumentData(mt::Ignite::instrumentsDataIndex::PROGRAM_INDEX) != presetIndex)
@@ -335,32 +332,12 @@ namespace ui
 
 	void InstrumentPreset::refreshData()
 	{
-		auto presetIndex = (int)instrPtr->getInstrumentData(mt::Ignite::instrumentsDataIndex::PROGRAM_INDEX) - 1;
-		DBG(String(presetIndex));
-		auto group = presetIndex / 8;
-		auto index = presetIndex % 8;
+        const int program = juce::jlimit(0, 137, static_cast<int>(instrPtr->getInstrumentData(mt::Ignite::instrumentsDataIndex::PROGRAM_INDEX)) - 1);
+        currentPresetGroup = PresetGroups::group(program);
+        setPresetGroup(currentPresetGroup);
+        setPresetButton(program - PresetGroups::start(currentPresetGroup));
+        // Opening the browser must not change the selected instrument.
 
-		if (presetIndex >= 48 && presetIndex <= 63)
-		{
-			group = 6;
-			index = presetIndex % 16;
-		}
-		else if (presetIndex >= 128)
-		{
-			group = 16;
-			index = presetIndex % 8;
-		}
-		else
-		{
-			group = presetIndex / 8;
-			index = presetIndex % 8;
-		}
-		if (group - 1 < 0)
-			group = 1;
-		currentPresetGroup = group - 1;
-		setPresetGroup(group - 1);
-		setPresetButton(index);
-		sendPreset(index, false);
 	}
 
 	void InstrumentPreset::buttonClicked(juce::Button* buttonThatWasClicked)

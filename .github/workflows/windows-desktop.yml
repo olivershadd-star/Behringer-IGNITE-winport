@@ -28,6 +28,12 @@ jobs:
           $app = Start-Process -FilePath ./dist/Ignite-Windows-x64/Ignite.exe -ArgumentList '--desktop-smoke' -WorkingDirectory $PWD -PassThru
           if (-not $app.WaitForExit(45000)) { Stop-Process -Id $app.Id -Force; throw 'Desktop startup timed out' }
           if ($app.ExitCode -ne 0) { throw "Desktop startup failed: $($app.ExitCode)" }
+      - name: Test original instrument selection interface
+        shell: pwsh
+        run: |
+          $app = Start-Process -FilePath ./dist/Ignite-Windows-x64/Ignite.exe -ArgumentList '--original-ui-test' -WorkingDirectory $PWD -PassThru
+          if (-not $app.WaitForExit(45000)) { Stop-Process -Id $app.Id -Force; throw 'Original UI test timed out' }
+          if ($app.ExitCode -ne 0) { throw "Original UI test failed: $($app.ExitCode)" }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -35,6 +41,9 @@ jobs:
           path: |
             desktop-smoke.png
             desktop-sequence-test.txt
+            original-ui-test.txt
+            original-ui-presets.png
+            original-ui-final.png
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:

@@ -45,6 +45,7 @@ namespace ui
 			RECORD, // Row 3
 			SETTINGS,*/
 		instrumentButton.setComponentID(String(INSTRUMENT));
+        instrumentButton.getProperties().set("automationID", "ignite.instruments");
 		midiConfigButton.setComponentID(String(MIDI_CONFIG));
 		cvioButton.setComponentID(String(CVIO_CONFIG));
 		songButton.setComponentID(String(SONG));
