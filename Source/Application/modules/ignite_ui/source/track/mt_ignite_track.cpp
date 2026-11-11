@@ -339,9 +339,12 @@ namespace ui
 			if (TrackParamsList.size() > 0)
 			{
 				uint8_t numParam = 8;// number of params for each track - return by TrackParam::paramTrackInfoList
-				for (auto tid = 0; tid < (numOfTrackBanks * 16); tid++)
+				// A loaded scene can contain a partial bank. Read only complete records returned by the engine.
+				const int returnedTracks = static_cast<int>(TrackParamsList.size() / numParam);
+				for (auto tid = 0; tid < juce::jmin(numOfTrackBanks * 16, returnedTracks); tid++)
 				{
 					int pos = TrackParamsList[numParam * tid].startPos;
+					if (pos < 0 || pos >= numOfTrackBanks * 16) continue;
 					scenePtr->setSceneData(mt::Ignite::sceneDataIndex::CURRENT_TRACK, pos, true);
 					gTrackRef = scenePtr->getTrackDataRef();
 					gTrackRef->instrument = TrackParamsList[(numParam * tid) + 1].MsgValue.get<std::string>();

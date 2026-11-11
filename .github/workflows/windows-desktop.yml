@@ -38,7 +38,6 @@ jobs:
           if (-not $monitor.WaitForExit(60000)) { Stop-Process -Name Ignite -Force -ErrorAction SilentlyContinue; Stop-Process -Id $monitor.Id -Force; throw 'Original UI test timed out' }
           if (-not (Test-Path original-ui-test.txt) -or -not ((Get-Content original-ui-test.txt -Raw).StartsWith('PASS:'))) {
             if (Get-ChildItem crash-dumps -Filter '*.dmp') {
-              choco install windows-sdk-10-version-2004-debuggers --yes --no-progress --limit-output
               $debugger = 'C:/Program Files (x86)/Windows Kits/10/Debuggers/x64/cdb.exe'
               if (Test-Path $debugger) {
                 $dump = (Get-ChildItem crash-dumps -Filter '*.dmp' | Select-Object -First 1).FullName
