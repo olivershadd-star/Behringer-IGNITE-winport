@@ -1,0 +1,23 @@
+name: Original IGNITE musical core
+on:
+  workflow_dispatch:
+  push:
+    paths: ['DesktopCore/**', '.github/workflows/original-musical-core.yml']
+  pull_request:
+    paths: ['DesktopCore/**', '.github/workflows/original-musical-core.yml']
+permissions:
+  contents: read
+jobs:
+  original-patterns:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure original classes without hardware or JUCE
+        run: cmake -S DesktopCore -B build/original-patterns
+      - name: Build original Pattern, Bar and Step
+        run: cmake --build build/original-patterns --config Release --parallel 2
+      - name: Test musical model and host boundaries
+        run: ctest --test-dir build/original-patterns -C Release --output-on-failure

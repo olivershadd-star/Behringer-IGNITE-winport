@@ -1,0 +1,34 @@
+{
+  "Pattern.h": {
+    "path": "Source/Application/modules/Common/Modules/Pattern.h",
+    "sha256": "9d21ca09dad5a26fb96b8f614edeb2c38aadae9dc4c1b91f7cabec34dc1f9305"
+  },
+  "Pattern.cpp": {
+    "path": "Source/Application/modules/Common/Modules/Pattern.cpp",
+    "sha256": "e79fdc52d77f07c7b04c02695fa2629b3a7e769ea6b5679476633771a567b1bb"
+  },
+  "Bar.h": {
+    "path": "Source/Application/modules/Common/Modules/Bar.h",
+    "sha256": "1e38e3675badfbba7f87916d6d3be61a22f24073dd6fd98165ff34ef8ed3980e"
+  },
+  "Bar.cpp": {
+    "path": "Source/Application/modules/Common/Modules/Bar.cpp",
+    "sha256": "d29546d5547b6525b9c3b31cd6c80574436707a1002081c4cb76cadd830ad022"
+  },
+  "Step.h": {
+    "path": "Source/Application/modules/Common/Modules/Step.h",
+    "sha256": "a4c7258554232f88e72290596f91b56bfa84ff224c3064045effb2d700d9f96d"
+  },
+  "Step.cpp": {
+    "path": "Source/Application/modules/Common/Modules/Step.cpp",
+    "sha256": "bde4d666d5b308688eedfd3893495b30a04c3ef7836a0c9b7e5f33d565715828"
+  },
+  "ModelParams.h": {
+    "path": "Source/Application/modules/Firmware/Application/Model/ModelParams.h",
+    "sha256": "e4a41f03938290cb42690cfa4fa358afd0d293c0cb8ddb444ee11058c37c5138"
+  },
+  "EngineDataStruct.h": {
+    "path": "Source/Application/modules/common_defs/source/EngineDataStruct.h",
+    "sha256": "d950b80d644c589039cef4426bb1d0d7aa98942dce8f9c181f11681e7e4ae637"
+  }
+}
