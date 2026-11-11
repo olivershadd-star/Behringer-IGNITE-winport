@@ -147,11 +147,20 @@ private:
         if(selfTest) {
             ++testTick;if(testTick<10)return;
             if(testTick==10){if(!loaded||instruments.getNumItems()<128||!click(play)){finishTest(false,"Bank/catalog/Play input");return;}}
-            if(testTick>=11&&testTick<=80){float l[1024]{},r[1024]{};render(l,r,1024);testPeak=std::max(testPeak,meter.load());recordL.insert(recordL.end(),l,l+1024);recordR.insert(recordR.end(),r,r+1024);}
+            if(testTick>=11&&testTick<=92){float l[1024]{},r[1024]{};render(l,r,1024);testPeak=std::max(testPeak,meter.load());recordL.insert(recordL.end(),l,l+1024);recordR.insert(recordR.end(),r,r+1024);}
             if(testTick==60){if(!running.load()||testPeak<0.0001f||cursor.load()<1){finishTest(false,"Play did not advance original pattern into audible PCM");return;}click(stop);}
-            if(testTick==61){if(running.load()){finishTest(false,"Stop ignored");return;}click(grid[0][1]);}
-            if(testTick==62){if(!hasNote(0,1)){finishTest(false,"Grid did not edit original Pattern");return;}click(preview);}
-            if(testTick==81){finishTest(testPeak>0.0001f,"Embedded bank, actual Windows mouse Play/Stop/grid, original Pattern/SequenceManager and original Track effects -> audible offline PCM. Physical sound device not tested.");return;}
+            if(testTick==61){if(running.load()||meter.load()!=0){finishTest(false,"Stop ignored or left sounding notes");return;}click(grid[0][1]);}
+            if(testTick==62){if(!hasNote(0,1)){finishTest(false,"Grid did not edit original Pattern");return;}testPeak=0;click(preview);}
+            if(testTick==70){
+                if(testPeak<0.0001f){finishTest(false,"Instrument audition is silent");return;}
+                int id=1;for(const auto& preset:audio.presets()){if(preset.bank==128){instruments.setSelectedId(id,juce::sendNotificationSync);break;}++id;}
+                if(selectedBank!=128){finishTest(false,"Drum kit cannot be selected");return;}click(demo);testPeak=0;
+            }
+            if(testTick==71){if(!hasNote(0,0)||!hasNote(1,4)){finishTest(false,"Drum demo did not populate original Pattern");return;}click(play);}
+            if(testTick==90){if(!running.load()||testPeak<0.0001f){finishTest(false,"Drum pattern is silent");return;}click(stop);}
+            if(testTick==91){if(running.load()||meter.load()!=0){finishTest(false,"Drum Stop ignored");return;}click(clear);}
+            if(testTick==92){if(hasNote(0,0)){finishTest(false,"Clear ignored");return;}loadDemo();}
+            if(testTick==93){finishTest(true,"Embedded bank, instrument selection/audition, mouse Play/Stop/grid/demo/clear, original Pattern/SequenceManager and original Track effects -> audible piano and drum PCM. Physical sound device not tested.");return;}
         } else {
             if(output.running()) {deviceReady=true;status.setText("Sortie : "+juce::String(output.deviceName().c_str())+"  ·  "+(running.load()?"Lecture du pattern":"Prêt — choisis un son, puis Lecture"),juce::dontSendNotification);}
             else if(output.error()!=0){deviceReady=false;status.setText("Audio Windows indisponible : "+juce::String(output.errorText().c_str()),juce::dontSendNotification);}
