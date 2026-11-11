@@ -16,6 +16,9 @@ pipeline=fragments['Track-effect-pipeline.cpp.txt'].replace('_twentyMsBuffer','m
 text='''// Generated from verified original Track fragments.
 #include "TrackEffects.h"
 #include "tsf.h"
+// Behringer's release extension is defined only in the implementation section
+// of tsf.h. Its symbol is supplied by the original playback translation unit.
+extern "C" void tsf_set_noteReleaseTimeMs(int);
 #define USE_INTERNAL_EFFECTS
 using namespace juce;
 '''+methods+'''

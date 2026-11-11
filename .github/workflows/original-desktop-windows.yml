@@ -7,6 +7,9 @@ on:
     paths: ['Desktop/**', 'DesktopCore/**', '.github/workflows/original-desktop-windows.yml']
 permissions:
   contents: read
+concurrency:
+  group: original-desktop-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   desktop:
     runs-on: windows-2022
@@ -45,11 +48,15 @@ jobs:
             original-desktop*.wav
             build/core-desktop/original-core/original-core-audio.wav
             build/core-desktop/Testing/Temporary/LastTest.log
+      - name: Assemble a flat portable directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item isolated/IgniteCoreDesktop.exe dist/
+          Copy-Item Standalone/resources/GeneralUser-GS-LICENSE.txt dist/
+          Copy-Item LICENSE dist/
+          Copy-Item Desktop/README.md dist/
       - uses: actions/upload-artifact@v4
         with:
           name: Ignite-Core-Desktop-Windows
-          path: |
-            isolated/IgniteCoreDesktop.exe
-            Standalone/resources/GeneralUser-GS-LICENSE.txt
-            LICENSE
-            Desktop/README.md
+          path: dist/*
