@@ -1,0 +1,62 @@
+name: Standalone groovebox Windows
+on:
+  workflow_dispatch:
+  push:
+    paths: ['Standalone/**', '.github/workflows/standalone-windows.yml']
+  pull_request:
+    paths: ['Standalone/**', '.github/workflows/standalone-windows.yml']
+permissions:
+  contents: read
+jobs:
+  standalone:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build only the new hardware-independent JUCE target
+        shell: pwsh
+        run: |
+          cmake -S Standalone -B build/standalone -G 'Visual Studio 17 2022' -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed' }
+          cmake --build build/standalone --config Release --parallel 2
+          if ($LASTEXITCODE -ne 0) { throw 'Standalone build failed' }
+      - name: Test drums, instruments, sample clock, stop and device rates
+        shell: pwsh
+        run: |
+          ctest --test-dir build/standalone -C Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw 'Audio core tests failed' }
+      - name: Test actual Windows mouse and keyboard input through the app audio callback
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'build/standalone/IgniteStandalone_artefacts/Release/IgniteStandalone.exe'
+          $app = Start-Process -FilePath $exe -ArgumentList '--ui-self-test' -WorkingDirectory $PWD -PassThru
+          if (-not $app.WaitForExit(60000)) { Stop-Process -Id $app.Id -Force; throw 'Native UI workflow timed out' }
+          if ($app.ExitCode -ne 0) { throw "Native UI workflow failed: $($app.ExitCode)" }
+          Get-Content standalone-ui-test.txt
+      - name: Package one portable directory
+        shell: pwsh
+        run: |
+          $package = 'dist/Ignite-Standalone-Windows'
+          New-Item -ItemType Directory -Force $package | Out-Null
+          Copy-Item build/standalone/IgniteStandalone_artefacts/Release/IgniteStandalone.exe $package
+          Copy-Item Standalone/resources/Ignite.sf2 $package
+          Copy-Item Standalone/resources/GeneralUser-GS-LICENSE.txt $package
+          Copy-Item Standalone/README.md $package
+          Copy-Item LICENSE $package
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Standalone-validation
+          path: |
+            standalone-ui-*.png
+            standalone-ui-test.txt
+            standalone-ui-audio.wav
+            standalone-test-pattern.json
+            build/standalone/ignite-demo.wav
+            build/standalone/Testing/Temporary/LastTest.log
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ignite-Standalone-Windows
+          path: dist/Ignite-Standalone-Windows/*
+          if-no-files-found: error

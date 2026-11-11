@@ -1,12 +1,12 @@
-# IGNITE — portage Windows en cours
+# IGNITE — reprise du standalone Windows
 
-Adaptation du sequençeur Behringer IGNITE pour fonctionner sans la machine physique : interface JUCE, moteur TinySoundFont et effets d'origine. Le panneau ajoute au premier portage a ete retire. GeneralUser GS est fourni comme banque de remplacement avec sa licence.
+Le precedent portage est retire de la version proposee. Le travail reprend dans [`Standalone/`](Standalone/README.md), une cible JUCE autonome qui ne compile pas l'ancienne interface ni les services du materiel Linux.
 
-[Compilation et tests Windows](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/workflows/windows-desktop.yml) · [Guide Windows](WINDOWS-FR.md) · [Architecture du portage](PORTAGE-WINDOWS.md)
+Premiere etape : six pistes de batterie et d'instruments internes, un pattern de seize pas, un clavier, un choix de sons et un transport independants de toute machine IGNITE. La banque GeneralUser GS est fournie comme remplacement, avec sa licence. Le synthetiseur provient du ZIP source d'IGNITE ; ce premier modele de sequenceur est simple et nouveau.
 
-[Telecharger la version Windows avec l'interface d'origine](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/43027652588/artifacts/13859975282) · [Voir le navigateur de presets](docs/images/windows-original-presets.png).
+[Compilation et tests de la nouvelle base](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/workflows/standalone-windows.yml) · [Utilisation et limites](Standalone/README.md)
 
-Le workflow produit un seul ZIP contenant directement `Ignite.exe`, `assets/` et `Ignite.sf2`, sans archive imbriquee. Le [run 43027652588](https://github.com/olivershadd-star/Behringer-IGNITE-winport/actions/runs/43027652588) valide la compilation Windows, l'horloge, le rendu audio hors ligne du sequenceur, le redemarrage avec un projet enregistre et les callbacks des boutons Instruments > Add New > Preset > categorie > son > Apply. Le test verifie le programme recu par le moteur et sa selection a la reouverture du navigateur. La saisie complete d'un morceau a la souris et la sortie sur une carte son physique restent a valider.
+La nouvelle compilation est en cours de verification. Les anciennes archives `Ignite-Windows-x64` concernent le prototype refuse.
 
 ---
 
