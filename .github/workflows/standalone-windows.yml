@@ -43,7 +43,7 @@ jobs:
           Copy-Item Standalone/resources/GeneralUser-GS-LICENSE.txt $package
           Copy-Item Standalone/README.md $package
           Copy-Item LICENSE $package
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: Standalone-validation
@@ -55,7 +55,7 @@ jobs:
             build/standalone/ignite-demo.wav
             build/standalone/Testing/Temporary/LastTest.log
           if-no-files-found: warn
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Ignite-Standalone-Windows
           path: dist/Ignite-Standalone-Windows/*
