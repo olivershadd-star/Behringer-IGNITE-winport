@@ -27,6 +27,7 @@ prelude='''// Generated from verified original IGNITE declarations. See provenan
 #pragma once
 #include <cstdint>
 #include <cstdlib>
+#include <ctime>
 #include <string>
 #include <vector>
 #include <list>
