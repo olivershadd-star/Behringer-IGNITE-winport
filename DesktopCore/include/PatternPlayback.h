@@ -24,6 +24,11 @@ struct PatternPlaybackData {
 };
 PatternPlaybackData compilePatternPlayback(SequenceManager&, const Pattern&);
 struct LocalPreset { int bank = 0, program = 0; std::string name; };
+struct PatternAudioEffects {
+    virtual ~PatternAudioEffects() = default;
+    virtual void process(float* mono, int frames) = 0;
+    virtual void reset() = 0;
+};
 // Host-neutral PCM adapter. All methods have a single owner; the desktop host
 // must exchange compiled snapshots at an audio block boundary, never mutate
 // the original document concurrently with render(). No device/UI lives here.
@@ -36,9 +41,11 @@ public:
     bool loadBank(const void*, size_t);
     void prepare(double sampleRate);
     bool setPreset(int bank, int program);
+    void setEffects(PatternAudioEffects* processor) { effects = processor; }
     const std::vector<LocalPreset>& presets() const { return catalog; }
     void setPattern(PatternPlaybackData, double bpm);
     bool play();
+    bool audition(int pitch);
     void stop();
     void render(float* left, float* right, int frames);
     uint64_t framesRendered() const { return totalFrames; }
@@ -53,5 +60,7 @@ private:
     size_t nextEvent = 0;
     uint64_t totalFrames = 0, triggered = 0;
     bool playing = false;
+    PatternAudioEffects* effects = nullptr;
+    double previewGate = 0, previewTail = 0;
 };
 }

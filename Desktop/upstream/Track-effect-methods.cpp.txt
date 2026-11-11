@@ -1,0 +1,202 @@
+void Track::setInternalAudioEffects(uint8_t knobID, float value, bool isAlternate)
+{
+#ifdef USE_INTERNAL_EFFECTS
+	uint8_t knobBank = knobID % 8;
+	switch (knobBank)
+	{
+	case (uint8_t)InternalAudioCC::RELEASE:
+		/*if(isAlternate)
+			tsf_set_noteAttackTimeMs(value);
+		else*/
+		tsf_set_noteReleaseTimeMs(static_cast<int>(value));
+		break;
+
+	case (uint8_t)InternalAudioCC::FILTER_CUTOFF:
+		if (isAlternate)
+		{
+			if (value == 12)
+				filter.setMode(dsp::LadderFilter<float>::Mode::LPF12);
+			else
+				filter.setMode(dsp::LadderFilter<float>::Mode::LPF24);
+		}
+		else if (value != 0)
+		{
+			if (value <= 22)
+			{
+				filter.setEnabled(false);
+			}
+			else
+			{
+				filter.setEnabled(true);
+				filter.setCutoffFrequencyHz(value);
+			}
+		}
+		break;
+
+	case (uint8_t)InternalAudioCC::RESONANCE:
+		filter.setResonance(value * 0.01f);
+		break;
+
+	case (uint8_t)InternalAudioCC::VOLUME:
+		if (isAlternate)
+			trackGain.setGainLinear(value * 0.01f);
+		else
+			_songManager->setMasterVolume(value * 0.01f);
+		break;
+
+	case (uint8_t)InternalAudioCC::REVERB:
+		if (isAlternate)
+			theReverbParameters.dryLevel = (value * 0.01f);
+		else
+			theReverbParameters.width = (value * 0.01f);
+		break;
+
+	case (uint8_t)InternalAudioCC::CHORUS:
+		if (value == 0)
+		{
+			chorusStatus[1] = false;
+		}
+		else
+		{
+			chorusStatus[1] = true;
+			if (isAlternate)
+				_Chorus[0].setDepth(value * 0.01f);
+			else
+				if (value >= 100)
+					_Chorus[0].setRate(99);
+				else
+					_Chorus[0].setRate(value);
+		}
+		break;
+
+		//case (uint8_t)InternalAudioCC::EQ_LOW:
+	case (uint8_t)InternalAudioCC::EQ_HIGH:
+		if (isAlternate)
+		{
+			if (value)
+				EQisEnabled[FILTER_HIGHEQ_INDEX] = true;
+			else
+				EQisEnabled[FILTER_HIGHEQ_INDEX] = false;
+
+			EQcutoffGain[FILTER_HIGHEQ_INDEX] = (value + 0.00001f);
+			eqFilter[FILTER_HIGHEQ_INDEX].coefficients = juce::dsp::IIR::Coefficients<float>::makeLowShelf(INTERNAL_AUDIO_SAMPLE_RATE, EQcutoffFreq[FILTER_HIGHEQ_INDEX], 1, EQcutoffGain[FILTER_HIGHEQ_INDEX]);
+		}
+		else
+		{
+			if (value)
+				EQisEnabled[FILTER_HIGHEQ_INDEX] = true;
+			else
+				EQisEnabled[FILTER_HIGHEQ_INDEX] = false;
+
+			if (value)
+			{
+				EQcutoffFreq[FILTER_HIGHEQ_INDEX] = (value);
+				if (EQcutoffGain[FILTER_HIGHEQ_INDEX])
+					eqFilter[FILTER_HIGHEQ_INDEX].coefficients = juce::dsp::IIR::Coefficients<float>::makeLowShelf(INTERNAL_AUDIO_SAMPLE_RATE, EQcutoffFreq[FILTER_HIGHEQ_INDEX], 1, EQcutoffGain[FILTER_HIGHEQ_INDEX]);
+			}
+		}
+		EQisEnabled[FILTER_HIGHEQ_INDEX] = (EQcutoffGain[FILTER_HIGHEQ_INDEX] > 0.0001f);//added multiple check here for EQisEnabled to avoid complex checks for each ticks when playing
+		break;
+
+		//case (uint8_t)InternalAudioCC::EQ_HIGH:
+	case (uint8_t)InternalAudioCC::EQ_LOW:
+		if (isAlternate)
+		{
+			if (value)
+				EQisEnabled[FILTER_LOWEQ_INDEX] = true;
+			else
+				EQisEnabled[FILTER_LOWEQ_INDEX] = false;
+
+			EQcutoffGain[FILTER_LOWEQ_INDEX] = (value + 0.00001f);
+			eqFilter[FILTER_LOWEQ_INDEX].coefficients = juce::dsp::IIR::Coefficients<float>::makeHighShelf(INTERNAL_AUDIO_SAMPLE_RATE, EQcutoffFreq[FILTER_LOWEQ_INDEX], 1, EQcutoffGain[FILTER_LOWEQ_INDEX]);
+		}
+		else
+		{
+			if (value)
+				EQisEnabled[FILTER_LOWEQ_INDEX] = true;
+			else
+				EQisEnabled[FILTER_LOWEQ_INDEX] = false;
+
+			if (value)
+			{
+				EQcutoffFreq[FILTER_LOWEQ_INDEX] = value;
+				if (EQcutoffGain[FILTER_LOWEQ_INDEX])
+					eqFilter[FILTER_LOWEQ_INDEX].coefficients = juce::dsp::IIR::Coefficients<float>::makeHighShelf(INTERNAL_AUDIO_SAMPLE_RATE, EQcutoffFreq[FILTER_LOWEQ_INDEX], 1, EQcutoffGain[FILTER_LOWEQ_INDEX]);
+			}
+		}
+		EQisEnabled[FILTER_LOWEQ_INDEX] = (EQcutoffGain[FILTER_LOWEQ_INDEX] > 0.0001f);//added multiple check here for EQisEnabled to avoid complex checks for each ticks when playing
+		break;
+
+	default:
+		DBG(String(__FUNCTION__) + "::" + String(__LINE__) + "::" + "WARN knobID for Internal Not valid: " + String(knobID));
+		break;
+
+	}
+#endif //USE_INTERNAL_EFFECTS
+}
+
+void Track::resetEffects(void)
+{
+#ifdef TEST_ENABLE_SAMPLE
+	readaudiofile = 1;
+	IndexReadaudiofile = 0;
+#endif
+	igniteReverb.reset();//clear old data when stoped/paused
+	eqFilter[FILTER_LOWEQ_INDEX].reset();
+	eqFilter[FILTER_HIGHEQ_INDEX].reset();
+	_Chorus[0].reset();
+	igniteReverb.reset();
+}
+
+void Track::effectsInit(void)
+{
+	reverbInit();
+	chorusInit();
+	eqInit();
+	filterInit();
+	gainInit();
+}
+
+void Track::reverbInit(void)
+{
+	igniteReverb.setSampleRate(INTERNAL_AUDIO_SAMPLE_RATE);//TODO : settings can be done from UI for each track?
+	theReverbParameters.dryLevel = 0.4f;
+	theReverbParameters.wetLevel = 0.33f;
+	theReverbParameters.roomSize = 1.0f;
+	theReverbParameters.damping = 0.5f;
+	theReverbParameters.width = 0.0f;
+	igniteReverb.setParameters(theReverbParameters);
+}
+
+void Track::chorusInit(void)
+{
+	_Chorus[0].prepare({ INTERNAL_AUDIO_SAMPLE_RATE, INTERNAL_AUDIO_20MS_BLOCK_SIZE, 1 });
+	_Chorus[0].setRate(0.2f); // Set chorus rate
+	_Chorus[0].setDepth(0.0f); // Set chorus depth
+	_Chorus[0].setMix(0.5f); // Set chorus Dry/wet Mix)
+}
+
+void Track::eqInit(void)
+{
+	eqFilter[FILTER_HIGHEQ_INDEX].prepare({ INTERNAL_AUDIO_SAMPLE_RATE, INTERNAL_AUDIO_20MS_BLOCK_SIZE, 1 });
+	//0.001 as 0 is not allowed, this code only for init
+	eqFilter[FILTER_HIGHEQ_INDEX].coefficients = juce::dsp::IIR::Coefficients<float>::makeLowShelf(INTERNAL_AUDIO_SAMPLE_RATE, EQcutoffFreq[FILTER_HIGHEQ_INDEX], 1, EQcutoffGain[FILTER_HIGHEQ_INDEX]);
+	eqFilter[FILTER_LOWEQ_INDEX].prepare({ INTERNAL_AUDIO_SAMPLE_RATE, INTERNAL_AUDIO_20MS_BLOCK_SIZE, 1 });
+	eqFilter[FILTER_LOWEQ_INDEX].coefficients = juce::dsp::IIR::Coefficients<float>::makeHighShelf(INTERNAL_AUDIO_SAMPLE_RATE, EQcutoffFreq[FILTER_LOWEQ_INDEX], 1, EQcutoffGain[FILTER_LOWEQ_INDEX]);
+}
+
+void Track::filterInit(void)
+{
+	filter.prepare({ INTERNAL_AUDIO_SAMPLE_RATE, INTERNAL_AUDIO_20MS_BLOCK_SIZE, 1 });
+	filter.setMode(dsp::LadderFilter<float>::Mode::LPF12);
+	filter.setCutoffFrequencyHz(filtercutoffFreq);
+	filter.setResonance(filterResonance);
+	filter.setEnabled(false);
+	filter.setDrive(1);
+}
+
+void Track::gainInit(void)
+{
+	trackGain.prepare({ INTERNAL_AUDIO_SAMPLE_RATE, INTERNAL_AUDIO_20MS_BLOCK_SIZE, 1 });
+	trackGain.setGainLinear(0.7f);
+}

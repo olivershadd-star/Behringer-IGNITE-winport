@@ -1,0 +1,55 @@
+name: Original core desktop Windows
+on:
+  workflow_dispatch:
+  push:
+    paths: ['Desktop/**', 'DesktopCore/**', '.github/workflows/original-desktop-windows.yml']
+  pull_request:
+    paths: ['Desktop/**', 'DesktopCore/**', '.github/workflows/original-desktop-windows.yml']
+permissions:
+  contents: read
+jobs:
+  desktop:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build original musical core, original effects and PC editor
+        shell: pwsh
+        run: |
+          cmake -S Desktop -B build/core-desktop -G 'Visual Studio 17 2022' -A x64
+          if ($LASTEXITCODE -ne 0) { throw 'Configure failed' }
+          cmake --build build/core-desktop --config Release --parallel 2
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
+          ctest --test-dir build/core-desktop -C Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw 'Core or effect tests failed' }
+      - name: Exercise real Windows mouse input from the isolated EXE
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force isolated | Out-Null
+          Copy-Item build/core-desktop/IgniteCoreDesktop_artefacts/Release/IgniteCoreDesktop.exe isolated/
+          $app = Start-Process -FilePath "$PWD/isolated/IgniteCoreDesktop.exe" -ArgumentList '--ui-self-test' -WorkingDirectory $PWD -PassThru
+          if (-not $app.WaitForExit(60000)) { Stop-Process -Id $app.Id -Force; throw 'UI timed out' }
+          Get-Content original-desktop-test.txt
+          if ($app.ExitCode -ne 0) { throw 'UI/audio validation failed' }
+          $app = Start-Process -FilePath "$PWD/isolated/IgniteCoreDesktop.exe" -ArgumentList '--startup-check' -WorkingDirectory $PWD -PassThru
+          if (-not $app.WaitForExit(15000)) { Stop-Process -Id $app.Id -Force; throw 'Startup timed out' }
+          Get-Content original-desktop-startup.txt
+          if ($app.ExitCode -ne 0) { throw 'Startup failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Original-desktop-validation
+          path: |
+            original-desktop*.txt
+            original-desktop*.png
+            original-desktop*.wav
+            build/core-desktop/original-core/original-core-audio.wav
+            build/core-desktop/Testing/Temporary/LastTest.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ignite-Core-Desktop-Windows
+          path: |
+            isolated/IgniteCoreDesktop.exe
+            Standalone/resources/GeneralUser-GS-LICENSE.txt
+            LICENSE
+            Desktop/README.md

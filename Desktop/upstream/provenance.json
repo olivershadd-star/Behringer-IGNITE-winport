@@ -1,0 +1,9 @@
+{
+  "original_path": "Source/Application/modules/Common/Modules/Track.cpp",
+  "original_file_sha256": "3cd030d90e904097b749dfb1f73b1f5ecbd276f0e163f0b61607444c395a4be6",
+  "normalization": "UTF-8, LF, selected complete methods and processing loop; musical expressions unchanged",
+  "fragments": {
+    "Track-effect-methods.cpp.txt": "af09b22e2d0b3adc8938f64d9b1224123adfa5cffd1b4a3cf7146bf236469bb2",
+    "Track-effect-pipeline.cpp.txt": "8691b8d9a32fa4890f81af6644f64eb2fce18ac2a91456b3928e5062e9d0fc67"
+  }
+}

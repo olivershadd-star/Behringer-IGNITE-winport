@@ -69,8 +69,11 @@ void PatternPlayback::prepare(double sampleRate) {
 }
 bool PatternPlayback::setPreset(int bank, int program) {
     if (!synth || tsf_get_presetindex(synth, bank, program) < 0) return false;
-    tsf_channel_sounds_off_all(synth, 0);
-    return tsf_channel_set_bank_preset(synth, 0, bank, program) != 0;
+    for (int channel=0;channel<2;++channel) {
+        tsf_channel_sounds_off_all(synth, channel);
+        if (!tsf_channel_set_bank_preset(synth, channel, bank, program)) return false;
+    }
+    return true;
 }
 void PatternPlayback::setPattern(PatternPlaybackData incoming, double tempo) {
     stop();pattern = std::move(incoming);bpm = std::clamp(tempo, 40.0, 240.0);
@@ -82,7 +85,16 @@ bool PatternPlayback::play() {
 }
 void PatternPlayback::stop() {
     playing = false;frameInLoop = 0;nextEvent = 0;
-    if (synth) tsf_channel_sounds_off_all(synth, 0);
+    previewGate=previewTail=0;
+    if (synth) for(int channel=0;channel<2;++channel) tsf_channel_sounds_off_all(synth, channel);
+    if (effects) effects->reset();
+}
+bool PatternPlayback::audition(int pitch) {
+    if (!synth || pitch<0 || pitch>127) return false;
+    tsf_channel_sounds_off_all(synth,1);
+    tsf_channel_note_on(synth,1,pitch,0.8f);
+    previewGate=rate*0.25;previewTail=rate*2;
+    return true;
 }
 int PatternPlayback::playStep() const {
     if (!playing || pattern.stepIds.empty()) return -1;
@@ -93,28 +105,36 @@ int PatternPlayback::playStep() const {
 void PatternPlayback::render(float* left, float* right, int frames) {
     if (frames <= 0) return;
     std::fill_n(left, frames, 0.0f);std::fill_n(right, frames, 0.0f);
-    if (!playing || !synth) return;
+    if ((!playing && previewTail<=0) || !synth) return;
     std::array<float, 256> interleaved{};
+    std::array<float, 128> mono{};
     // Original Pattern has 48 musical ticks per quarter. The host sample clock
     // replaces the firmware's 96-PPQN hardware pulse source (two pulses/tick).
     const double framesPerTick = rate * 60.0 / bpm / 48.0;
     const double loopFrames = pattern.ticks * framesPerTick;
     int offset = 0;
     while (offset < frames) {
-        if (frameInLoop >= loopFrames) {
+        if (playing && frameInLoop >= loopFrames) {
             frameInLoop -= loopFrames;nextEvent = 0;
         }
-        while (nextEvent < pattern.notes.size() && pattern.notes[nextEvent].tick * framesPerTick <= frameInLoop + 1e-9) {
+        while (playing && nextEvent < pattern.notes.size() && pattern.notes[nextEvent].tick * framesPerTick <= frameInLoop + 1e-9) {
             const auto& event = pattern.notes[nextEvent++];
             if (event.on) {tsf_channel_note_on(synth, 0, event.pitch, event.velocity / 127.0f);++triggered;}
             else tsf_channel_note_off(synth, 0, event.pitch);
         }
-        double boundary = loopFrames;
-        if (nextEvent < pattern.notes.size()) boundary = std::min(boundary, pattern.notes[nextEvent].tick * framesPerTick);
-        const int count = std::min({128, frames-offset, std::max(1, static_cast<int>(std::ceil(boundary-frameInLoop-1e-9)))});
+        double untilBoundary = playing ? loopFrames-frameInLoop : frames-offset;
+        if (playing && nextEvent < pattern.notes.size()) untilBoundary=std::min(untilBoundary,pattern.notes[nextEvent].tick*framesPerTick-frameInLoop);
+        if (previewGate>0) untilBoundary=std::min(untilBoundary,previewGate);
+        const int count = std::min({128, frames-offset, std::max(1, static_cast<int>(std::ceil(untilBoundary-1e-9)))});
         tsf_render_float(synth, interleaved.data(), count, 0);
-        for (int i=0;i<count;++i) {left[offset+i]=interleaved[i*2];right[offset+i]=interleaved[i*2+1];}
-        offset += count;frameInLoop += count;totalFrames += count;
+        if (effects) {
+            for (int i=0;i<count;++i) mono[i]=(interleaved[i*2]+interleaved[i*2+1])*0.5f;
+            effects->process(mono.data(),count);
+            for (int i=0;i<count;++i) left[offset+i]=right[offset+i]=mono[i];
+        } else for (int i=0;i<count;++i) {left[offset+i]=interleaved[i*2];right[offset+i]=interleaved[i*2+1];}
+        if(previewGate>0) {previewGate-=count;if(previewGate<=0)tsf_channel_note_off_all(synth,1);}
+        previewTail=std::max(0.0,previewTail-count);
+        offset += count;if(playing)frameInLoop += count;totalFrames += count;
     }
 }
 }
